@@ -30,7 +30,7 @@ ADRs written for each in [`03_decisions/`](../03_decisions/).
 
 ## Outputs (this session)
 
-- `00_index/project-map.md`
+- `00_index/project-map.md`, `00_index/getting-started.md` (from-zero local run & test runbook)
 - `01_specs/poddaily-prd.md`, `01_specs/phase-1-core-spec.md`
 - `02_architecture/`: system-overview, data-model, slack-integration, scheduler,
   testing-and-local-dev

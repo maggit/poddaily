@@ -14,6 +14,7 @@ tools that runs on internal infrastructure with no per-seat cost.
 
 | Document | What it is |
 |---|---|
+| [Getting Started](getting-started.md) | From-zero runbook to run & test locally (Supabase, Slack app, env vars, smoke) |
 | [PRD](../01_specs/poddaily-prd.md) | Full product requirements (source of truth for scope) |
 | [Phase 1 Core spec](../01_specs/phase-1-core-spec.md) | The validated design we're building first |
 | [System overview](../02_architecture/system-overview.md) | Monorepo, services, runtime topology |
