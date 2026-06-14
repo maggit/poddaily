@@ -126,22 +126,35 @@ to be supplied by the owner**; the spec treats styling as a thin layer over the 
 
 ## 9. Build order (vertical slice)
 
-1. Monorepo scaffold + `packages/db` (Drizzle schema + first migration) + `packages/shared`.
-2. Slack app manifest + bot install + admin NextAuth login.
-3. Team create + add member (captures TZ) — minimal API + UI.
-4. Standup config (questions + schedule).
-5. Scheduler → `send-standup-dm` → DM Q&A engine. **(core risk — front-loaded)**
-6. Reporter user-OAuth + post-as-user channel broadcast + threading.
-7. Timeout / skip handling + retry.
+Each step is independently demoable and lands with the smoke checkpoint that proves it.
 
-Each step is independently demoable.
+1. Monorepo scaffold + `packages/db` (Drizzle schema + first migration) + `packages/shared`
+   + local dev setup (Supabase CLI, Redis, seed). → `smoke:db`
+2. Slack app manifest + bot install + admin NextAuth login. → `smoke:auth`
+3. Team create + add member (captures TZ) — minimal API + UI. → `smoke:team`
+4. Standup config (questions + schedule). → `smoke:config`
+5. Scheduler → `send-standup-dm` → DM Q&A engine. **(core risk — front-loaded)** → `smoke:standup`
+6. Reporter user-OAuth + post-as-user channel broadcast + threading. → `smoke:standup` (broadcast assertions)
+7. Timeout / skip handling + retry. → `smoke:edges`
 
 ## 10. Testing
 
-TDD on pure logic first: DM state reconstruction, per-user-TZ schedule computation,
-`{last_report_date}` interpolation, and Block Kit formatting are unit-tested as pure
-functions. Slack/DB edges get integration tests against a test Postgres + a mocked Slack
-client.
+Full strategy in [testing & local dev](../02_architecture/testing-and-local-dev.md) and the
+[e2e-smoke ADR](../03_decisions/2026-06-14-e2e-smoke-with-slack-stub.md).
+
+- **Unit (TDD-first):** pure logic in `packages/shared` — DM state reconstruction, per-user-TZ
+  schedule math, `{last_report_date}` interpolation, Block Kit builders.
+- **Integration:** a route/job against local Postgres + a mocked Slack client.
+- **Smoke (E2E):** `pnpm smoke:phase1` drives the whole stack (DB → API → worker → **Slack
+  stub**) through real user scenarios; the keystone `smoke:standup` proves the full
+  trigger → DM Q&A → post-as-user broadcast pipeline. CI runs unit + integration + smoke with
+  no secrets.
+- **Live smoke:** a manual runbook against a real Slack dev workspace, walked once before the
+  phase is declared done.
+
+A phase is **done** only when its automated smoke is green in CI *and* the live runbook has
+been walked once. Local stack: Supabase CLI (Postgres) + Redis container; the Slack boundary
+is faked via `SLACK_API_BASE_URL` pointing at the stub.
 
 ## 11. Environment variables (Phase 1)
 
