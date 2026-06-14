@@ -20,6 +20,7 @@ tools that runs on internal infrastructure with no per-seat cost.
 | [Data model](../02_architecture/data-model.md) | Postgres schema (Drizzle) + deltas from PRD |
 | [Slack integration](../02_architecture/slack-integration.md) | Three OAuth surfaces, DM engine, broadcast |
 | [Scheduler](../02_architecture/scheduler.md) | Per-user-TZ BullMQ scheduling |
+| [Testing & local dev](../02_architecture/testing-and-local-dev.md) | Local setup, per-phase smoke tests, Slack stub, live runbook |
 
 ## Decisions (ADRs)
 
@@ -31,6 +32,7 @@ tools that runs on internal infrastructure with no per-seat cost.
 | [Supabase as managed Postgres](../03_decisions/2026-06-14-supabase-as-database.md) | Supabase for DB only; NextAuth for auth |
 | [Vertical-slice build order](../03_decisions/2026-06-14-vertical-slice-build.md) | Build one feature end-to-end first |
 | [Stateless DM state](../03_decisions/2026-06-14-stateless-dm-state.md) | Reconstruct conversation state from Postgres |
+| [E2E smoke via Slack stub](../03_decisions/2026-06-14-e2e-smoke-with-slack-stub.md) | Per-phase smoke test with a stubbed Slack + live checklist |
 
 ## Diagrams
 

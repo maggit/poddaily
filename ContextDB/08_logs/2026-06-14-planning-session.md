@@ -23,6 +23,8 @@ design + this ContextDB doc set.
 | Workers/queue | **Self-hosted Redis** + BullMQ | Supabase has no Redis |
 | Build order | **Vertical slice first** | De-risk Slack + scheduler early |
 | DM state | **Stateless, reconstructed from Postgres** | No Redis conversation store |
+| Per-phase E2E testing | **Smoke test via Slack stub + live runbook** | Hybrid; CI-deterministic |
+| Local DB for dev/tests | **Supabase CLI local** | Prod parity |
 
 ADRs written for each in [`03_decisions/`](../03_decisions/).
 
@@ -30,9 +32,10 @@ ADRs written for each in [`03_decisions/`](../03_decisions/).
 
 - `00_index/project-map.md`
 - `01_specs/poddaily-prd.md`, `01_specs/phase-1-core-spec.md`
-- `02_architecture/`: system-overview, data-model, slack-integration, scheduler
-- `03_decisions/`: 6 ADRs (post-as-user, per-user-TZ, new-app, supabase, vertical-slice,
-  stateless-DM)
+- `02_architecture/`: system-overview, data-model, slack-integration, scheduler,
+  testing-and-local-dev
+- `03_decisions/`: 7 ADRs (post-as-user, per-user-TZ, new-app, supabase, vertical-slice,
+  stateless-DM, e2e-smoke-with-slack-stub)
 - `07_diagrams/`: architecture, dm-state-machine, scheduler-flow
 - Root `CLAUDE.md` with the ContextDB routing snippet
 - `git init` (branch `main`)
