@@ -50,8 +50,22 @@ ContextDB/
 - Prefer small, composable files. Append rather than overwrite. Do not delete without permission.
 - Date-prefix files when chronology matters: `2026-06-14-decision.md`.
 
+## Definition of done (per phase)
+
+poddaily is an **open-source** project shipped in phases. A phase is done only when **all**
+of these hold (canonical list:
+[testing-and-local-dev.md](ContextDB/02_architecture/testing-and-local-dev.md#definition-of-done-per-phase)):
+
+1. Automated `smoke:phaseN` green in CI (with unit + integration).
+2. Live smoke runbook walked once against a real Slack dev workspace.
+3. **Root [`README.md`](README.md) updated** — tick shipped feature-checklist items and add
+   any new setup/configuration/usage info an open-source user needs.
+4. Affected `ContextDB/` docs + the getting-started runbook updated.
+
+Do not consider a phase complete or mark its work done until the README and context reflect it.
+
 ## Current state
 
-Phase 1 Core is **specced, not yet implemented**. The repo currently contains only
-`ContextDB/` docs. Implementation begins from
+Phase 1 Core is **specced, not yet implemented**. The repo currently contains
+`ContextDB/` docs, the root `README.md`, and `CLAUDE.md`. Implementation begins from
 [`ContextDB/01_specs/phase-1-core-spec.md`](ContextDB/01_specs/phase-1-core-spec.md).

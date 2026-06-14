@@ -37,8 +37,16 @@ ADRs written for each in [`03_decisions/`](../03_decisions/).
 - `03_decisions/`: 7 ADRs (post-as-user, per-user-TZ, new-app, supabase, vertical-slice,
   stateless-DM, e2e-smoke-with-slack-stub)
 - `07_diagrams/`: architecture, dm-state-machine, scheduler-flow
-- Root `CLAUDE.md` with the ContextDB routing snippet
+- Root `CLAUDE.md` with the ContextDB routing snippet + per-phase Definition of Done
+- Root `README.md` — open-source front door (feature checklist updated per phase)
 - `git init` (branch `main`)
+
+## Process conventions established
+
+- **Per-phase Definition of Done** (canonical in
+  [testing-and-local-dev](../02_architecture/testing-and-local-dev.md#definition-of-done-per-phase)):
+  automated smoke green in CI + live runbook walked once + **README updated** (feature
+  checklist + open-source setup/usage info) + `ContextDB/` docs and getting-started current.
 
 ## Still open (non-blocking)
 

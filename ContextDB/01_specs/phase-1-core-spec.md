@@ -152,9 +152,14 @@ Full strategy in [testing & local dev](../02_architecture/testing-and-local-dev.
 - **Live smoke:** a manual runbook against a real Slack dev workspace, walked once before the
   phase is declared done.
 
-A phase is **done** only when its automated smoke is green in CI *and* the live runbook has
-been walked once. Local stack: Supabase CLI (Postgres) + Redis container; the Slack boundary
-is faked via `SLACK_API_BASE_URL` pointing at the stub.
+Local stack: Supabase CLI (Postgres) + Redis container; the Slack boundary is faked via
+`SLACK_API_BASE_URL` pointing at the stub.
+
+**Definition of done** (canonical list in
+[testing & local dev](../02_architecture/testing-and-local-dev.md#definition-of-done-per-phase)):
+a phase is done only when its automated smoke is green in CI, the live runbook has been walked
+once, the root **README is updated** (feature checklist + any new setup/usage info for
+open-source users), and the affected `ContextDB/` docs + getting-started runbook are current.
 
 ## 11. Environment variables (Phase 1)
 
