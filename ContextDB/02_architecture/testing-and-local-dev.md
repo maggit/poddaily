@@ -19,6 +19,11 @@ Pure logic lives in `packages/shared` so it is unit-testable without infrastruct
 
 ## Local environment
 
+> For the complete from-zero setup — creating the Supabase project, registering and
+> configuring the Slack app, tunnels, and every env var — follow the
+> [Getting Started runbook](../00_index/getting-started.md). This section is the condensed
+> version.
+
 ### Prerequisites
 - Node 22 + pnpm
 - Docker (for Redis)
