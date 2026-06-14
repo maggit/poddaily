@@ -121,8 +121,21 @@ Run once against a real Slack dev workspace; the stub cannot catch these:
 `pnpm test` (unit + integration) and `pnpm smoke:phase1` run in CI against Supabase local +
 a Redis service + the Slack stub — no secrets, fully deterministic. Live smoke stays manual.
 
-## Convention for future phases
+## Definition of done (per phase)
 
-Every PRD phase adds its own `smoke:phaseN` scenarios and extends the live runbook. A phase
-is not "done" until its automated smoke passes in CI **and** the live runbook has been walked
-once.
+Every PRD phase adds its own `smoke:phaseN` scenarios and extends the live runbook. A phase is
+**done** only when **all** of the following hold:
+
+1. **Automated smoke green in CI** — `smoke:phaseN` passes alongside unit + integration tests.
+2. **Live runbook walked once** — one real standup validated against a Slack dev workspace.
+3. **README updated** — the root [`README.md`](../../README.md) reflects the phase: tick the
+   shipped items in the feature checklist, and add/adjust any setup, configuration, or usage
+   information a new open-source user needs (new env vars, new commands, new Slack scopes,
+   deployment notes). poddaily is open source — the README is the front door and must stay
+   accurate as features land.
+4. **Context updated** — relevant `ContextDB/` docs (specs/architecture/ADRs) and the
+   [getting-started runbook](../00_index/getting-started.md) reflect any changes made during
+   the phase.
+
+This list is the canonical per-phase Definition of Done; the
+[Phase 1 spec](../01_specs/phase-1-core-spec.md) and `CLAUDE.md` reference it.
