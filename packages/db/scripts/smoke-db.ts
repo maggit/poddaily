@@ -17,6 +17,14 @@ async function main() {
     if (!names.includes(t)) { console.error(`✗ missing table: ${t}`); ok = false; }
   }
 
+  // Stop here if the schema is missing — the seed-count queries below would throw
+  // a noisy "relation does not exist" error that obscures the clear message above.
+  if (!ok) {
+    await sql.end();
+    console.error("smoke:db FAILED");
+    process.exit(1);
+  }
+
   const [{ count: teamCount }] = await sql`select count(*)::int as count from teams`;
   const [{ count: memberCount }] = await sql`select count(*)::int as count from team_members`;
   const [{ count: standupCount }] = await sql`select count(*)::int as count from standups`;
