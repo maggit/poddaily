@@ -7,6 +7,13 @@ export interface Question {
   type: QuestionType;
 }
 
+/** One answered question within a standup report's `answers` array. */
+export interface ReportAnswer {
+  questionId: string;
+  questionText: string;
+  answer: string;
+}
+
 export const DEFAULT_QUESTIONS: Question[] = [
   { id: "q1", text: "What have you done since {last_report_date}?", type: "text" },
   { id: "q2", text: "What will you do today?", type: "text" },
