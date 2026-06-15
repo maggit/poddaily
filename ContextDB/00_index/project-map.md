@@ -41,6 +41,14 @@ tools that runs on internal infrastructure with no per-seat cost.
 - [DM state machine](../07_diagrams/dm-state-machine.mmd.md)
 - [Scheduler flow](../07_diagrams/scheduler-flow.mmd.md)
 
+## Implementation plans (`todos/`)
+
+Phase 1 Core is built as a vertical slice of 7 demoable steps; one plan per step, authored
+just-in-time so each reflects what the prior step produced.
+
+- [Step 1 — Foundation](../todos/2026-06-14-phase1-step1-foundation-plan.md) (monorepo, db, shared, local infra, `smoke:db`)
+- Steps 2–7 — authored before each is executed.
+
 ## Logs
 
 - [2026-06-14 planning session](../08_logs/2026-06-14-planning-session.md)
