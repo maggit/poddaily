@@ -1,0 +1,20 @@
+{
+  "name": "poddaily",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "packageManager": "pnpm@10.28.2",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "pnpm --filter @poddaily/db generate",
+    "db:migrate": "pnpm --filter @poddaily/db migrate",
+    "seed": "pnpm --filter @poddaily/db seed",
+    "smoke:db": "pnpm --filter @poddaily/db smoke"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0",
+    "tsx": "^4.16.0"
+  }
+}
