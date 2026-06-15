@@ -45,9 +45,12 @@ cp .env.example .env.local        # stub values are fine for local
 supabase start                    # local Postgres
 docker compose up -d redis        # queue
 pnpm db:migrate && pnpm seed      # schema + known-state data
-pnpm dev                          # web :3000, api :3001, worker
-pnpm smoke:phase1                 # end-to-end smoke test
+pnpm smoke:db                     # foundation end-to-end check (schema + seed + connectivity)
 ```
+
+> **Current state (Foundation):** the commands above work today. `pnpm dev` (web/api/worker)
+> and the full `pnpm smoke:phase1` arrive as later build steps land — see the
+> [build order](ContextDB/01_specs/phase-1-core-spec.md#9-build-order-vertical-slice).
 
 For the **complete from-zero runbook** — creating a Supabase project, registering and
 configuring the Slack app (scopes, event URLs, tokens), tunnels, the reporter user-OAuth, and
