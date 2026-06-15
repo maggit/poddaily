@@ -1,6 +1,7 @@
 import {
   pgTable, uuid, text, boolean, timestamp, jsonb, unique,
 } from "drizzle-orm/pg-core";
+import type { Question, ReportAnswer } from "@poddaily/shared";
 
 export const teams = pgTable("teams", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -29,7 +30,7 @@ export const standups = pgTable("standups", {
   id: uuid("id").primaryKey().defaultRandom(),
   teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }).unique(),
   name: text("name").notNull().default("Daily Standup"),
-  questions: jsonb("questions").notNull(),
+  questions: jsonb("questions").$type<Question[]>().notNull(),
   scheduleCron: text("schedule_cron").notNull(),
   scheduleTz: text("schedule_tz").notNull().default("America/Mexico_City"),
   introMessage: text("intro_message"),
@@ -54,7 +55,7 @@ export const standupReports = pgTable("standup_reports", {
   runId: uuid("run_id").references(() => standupRuns.id),
   slackUserId: text("slack_user_id").notNull(),
   slackDisplayName: text("slack_display_name").notNull(),
-  answers: jsonb("answers").notNull(),
+  answers: jsonb("answers").$type<ReportAnswer[]>().notNull(),
   status: text("status").default("in_progress"),
   dmThreadTs: text("dm_thread_ts"),
   channelPostTs: text("channel_post_ts"),
@@ -76,3 +77,18 @@ export const standupReminders = pgTable("standup_reminders", {
   sentAt: timestamp("sent_at", { withTimezone: true }).defaultNow(),
   type: text("type").default("initial"),
 });
+
+export type Team = typeof teams.$inferSelect;
+export type NewTeam = typeof teams.$inferInsert;
+export type TeamMember = typeof teamMembers.$inferSelect;
+export type NewTeamMember = typeof teamMembers.$inferInsert;
+export type Standup = typeof standups.$inferSelect;
+export type NewStandup = typeof standups.$inferInsert;
+export type StandupRun = typeof standupRuns.$inferSelect;
+export type NewStandupRun = typeof standupRuns.$inferInsert;
+export type StandupReport = typeof standupReports.$inferSelect;
+export type NewStandupReport = typeof standupReports.$inferInsert;
+export type SlackUserToken = typeof slackUserTokens.$inferSelect;
+export type NewSlackUserToken = typeof slackUserTokens.$inferInsert;
+export type StandupReminder = typeof standupReminders.$inferSelect;
+export type NewStandupReminder = typeof standupReminders.$inferInsert;
