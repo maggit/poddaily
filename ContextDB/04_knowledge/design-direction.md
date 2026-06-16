@@ -11,12 +11,12 @@ every UI build step. It synthesizes three references the owner provided:
   (Next / Previously, activity rollups, reactions), the right-rail **Stats** (Participation,
   Intentions met, Blockers, Feeling as colored progress bars), and the **Roster** (avatars
   with colored status rings). Indigo/violet accent, quick calm tab transitions.
-- **Geekbot** (original PRD reference) — the *information layout*: participation bar with
+- **The original PRD reference screenshots** — the *information layout*: participation bar with
   reporter avatars (reported vs not), the member **permission table** (View/Report/Edit),
   the **schedule picker** (weekday chips + time + tz), the **question editor**.
 
 **Core principle:** Resend's restraint and polish, carrying Steady's standup-native components,
-laid out with Geekbot's admin information density.
+laid out with the reference admin information density.
 
 ## Theme split (decided)
 
@@ -102,7 +102,7 @@ tracks on a light track (`#F1F1F3`), mirroring Steady.
 - **Status pill:** tinted bg + colored text per the semantic table.
 - **Avatar + status ring:** roster/participants; ring color = report status. (Steady Roster.)
 - **Participation bar:** horizontal track, reporter avatars clustered (reported left,
-  not-reported right), % label — Geekbot Insights pattern in this palette.
+  not-reported right), % label — the reference Insights pattern in this palette.
 - **Stats rail:** stacked labeled colored progress bars (Participation, Blockers, Feeling) —
   Steady right rail.
 - **Buttons:** primary = solid `--primary` (black) / white text; secondary = white + border;
@@ -130,6 +130,28 @@ menu/modal open. Nothing bouncy; restraint over flourish.
 - **Brand accent: indigo `#6366F1`** (Steady-flavored) — **decided & signed off 2026-06-16**.
   Used sparingly for active nav, links, focus rings, and key highlights; semantic status
   colors (green/amber/red) carry meaning on top.
+
+## Theming — how to restyle (single-file change)
+
+The UI is built to be reskinned without touching components:
+
+- **All tokens live in one file:** `apps/web/app/globals.css`. `:root` = the light product
+  theme; the `.dark` scope = the auth/login theme. Values are plain hex.
+- **Components use only semantic classes** — `bg-background`, `text-muted-foreground`,
+  `border-border`, `bg-primary`, `text-accent`, `bg-accent-subtle`, and the status families
+  (`bg-success-subtle`/`text-success-foreground`, etc.). No component hardcodes a color.
+- **To reskin:** edit the token values in `globals.css`. Example: change `--accent` from
+  `#6366f1` to another hue and every active nav item, link, focus ring, and accent highlight
+  updates everywhere. Swap the whole palette by editing `:root`. Adjust corner roundness via
+  `--radius`.
+- **Nav items** live in one config: `apps/web/lib/nav.ts`.
+- **Reusable shell** (`components/app-shell/sidebar.tsx`, `top-bar.tsx`,
+  `components/page-header.tsx`, `components/ui/status-pill.tsx`) localizes layout/polish — edit
+  one file to change that piece app-wide.
+- Tokens map to Tailwind utilities via the `@theme inline` block in `globals.css`; add a new
+  token there to expose a new utility.
+
+This is the path for the later "polish" pass — change tokens/components in place, no rewrites.
 
 ## Provenance
 
