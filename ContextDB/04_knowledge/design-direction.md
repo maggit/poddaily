@@ -127,9 +127,9 @@ menu/modal open. Nothing bouncy; restraint over flourish.
   the product stays light while auth stays dark.
 - Geist Sans/Mono come from the scaffold; add the display serif (Instrument Serif) via
   `next/font`.
-- **Open tweak (easily changed):** brand accent is **indigo `#6366F1`** (Steady-flavored). If
-  the owner prefers Resend's stricter monochrome, drop accent to near-black and keep only the
-  semantic status colors.
+- **Brand accent: indigo `#6366F1`** (Steady-flavored) — **decided & signed off 2026-06-16**.
+  Used sparingly for active nav, links, focus rings, and key highlights; semantic status
+  colors (green/amber/red) carry meaning on top.
 
 ## Provenance
 
