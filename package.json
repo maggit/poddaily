@@ -10,7 +10,8 @@
     "db:generate": "pnpm --filter @poddaily/db generate",
     "db:migrate": "pnpm --filter @poddaily/db migrate",
     "seed": "pnpm --filter @poddaily/db seed",
-    "smoke:db": "pnpm --filter @poddaily/db smoke"
+    "smoke:db": "pnpm --filter @poddaily/db smoke",
+    "smoke:auth": "vitest run apps/web/tests/auth-smoke.test.ts tools/slack-stub/src/server.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22",
