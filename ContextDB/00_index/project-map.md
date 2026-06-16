@@ -49,7 +49,7 @@ just-in-time so each reflects what the prior step produced.
 
 - ✅ [Step 1 — Foundation](../todos/2026-06-14-phase1-step1-foundation-plan.md) — **DONE** (merged `c540192`): monorepo, db, shared, local infra, `smoke:db`.
 - ✅ [Step 2 — Slack manifest + admin NextAuth login](../todos/2026-06-15-phase1-step2-auth-plan.md) — **DONE** (merged `d804e4f`): `apps/web`, Slack OIDC login, route protection, `tools/slack-stub`, `smoke:auth`.
-- 🚧 Step 3 — team create + add member (captures TZ) (`smoke:team`) — next.
+- 🚧 Step 3 — team create + add member (captures TZ) (`smoke:team`) — **design direction locked** ([design-direction](../04_knowledge/design-direction.md), indigo accent, [admin-CRUD ADR](../03_decisions/2026-06-16-admin-crud-via-next-server.md)); ready to build. Part 1: design system + app shell + login restyle; part 2: team/member CRUD.
 - Steps 4–7 — authored before each is executed.
 
 ## Logs
