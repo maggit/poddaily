@@ -1,5 +1,9 @@
 # Phase 1 — Step 1: Foundation Implementation Plan
 
+> **✅ STATUS: DONE** — executed via subagent-driven development and merged to `main`
+> (merge commit `c540192`, 2026-06-15). All 8 tasks complete; `pnpm test` (4) and
+> `pnpm smoke:db` green. See [build log](../08_logs/2026-06-14-foundation-build.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stand up the poddaily monorepo with a typed database layer, a tested shared-logic package, local infrastructure, and a runnable `smoke:db` end-to-end check — the foundation every later vertical-slice step builds on.
