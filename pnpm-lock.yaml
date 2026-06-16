@@ -103,6 +103,8 @@ importers:
 
   packages/shared: {}
 
+  tools/slack-stub: {}
+
 packages:
 
   '@alloc/quick-lru@5.2.0':
