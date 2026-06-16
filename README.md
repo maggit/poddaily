@@ -15,7 +15,7 @@ infrastructure.
 Checked items are implemented; unchecked are planned. Updated at the end of each phase.
 
 **Phase 1 — Core**
-- [ ] Slack OAuth admin login
+- [x] Slack OAuth admin login
 - [ ] Team CRUD (name, Slack channel, tribe)
 - [ ] Member management with per-member permissions + timezone capture
 - [ ] Standup configuration (questions, schedule, intro/outro)
@@ -46,10 +46,15 @@ supabase start                    # local Postgres
 docker compose up -d redis        # queue
 pnpm db:migrate && pnpm seed      # schema + known-state data
 pnpm smoke:db                     # foundation end-to-end check (schema + seed + connectivity)
+pnpm smoke:auth                   # admin Slack-login flow against the stub
+
+# The admin web app (login + dashboard):
+pnpm --filter @poddaily/web dev   # → http://localhost:3000 (signed out → /login)
 ```
 
-> **Current state (Foundation):** the commands above work today. `pnpm dev` (web/api/worker)
-> and the full `pnpm smoke:phase1` arrive as later build steps land — see the
+> **Current state (through Step 2):** the commands above work today — the database layer and
+> the admin web app with Slack OAuth login (`/login` → protected `/dashboard`). The multi-service
+> `pnpm dev` and the full `pnpm smoke:phase1` arrive as later build steps land — see the
 > [build order](ContextDB/01_specs/phase-1-core-spec.md#9-build-order-vertical-slice).
 
 For the **complete from-zero runbook** — creating a Supabase project, registering and
