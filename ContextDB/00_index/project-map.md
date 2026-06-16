@@ -47,8 +47,9 @@ Phase 1 Core is built as a vertical slice of 7 demoable steps; one plan per step
 just-in-time so each reflects what the prior step produced.
 
 - ✅ [Step 1 — Foundation](../todos/2026-06-14-phase1-step1-foundation-plan.md) — **DONE** (merged `c540192`): monorepo, db, shared, local infra, `smoke:db`.
-- 🚧 [Step 2 — Slack manifest + bot install + admin NextAuth login](../todos/2026-06-15-phase1-step2-auth-plan.md) — in progress (`smoke:auth`).
-- Steps 3–7 — authored before each is executed.
+- ✅ [Step 2 — Slack manifest + admin NextAuth login](../todos/2026-06-15-phase1-step2-auth-plan.md) — **DONE** (merged `d804e4f`): `apps/web`, Slack OIDC login, route protection, `tools/slack-stub`, `smoke:auth`.
+- 🚧 Step 3 — team create + add member (captures TZ) (`smoke:team`) — next.
+- Steps 4–7 — authored before each is executed.
 
 ## Logs
 
