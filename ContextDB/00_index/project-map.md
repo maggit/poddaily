@@ -22,6 +22,7 @@ tools that runs on internal infrastructure with no per-seat cost.
 | [Slack integration](../02_architecture/slack-integration.md) | Three OAuth surfaces, DM engine, broadcast |
 | [Scheduler](../02_architecture/scheduler.md) | Per-user-TZ BullMQ scheduling |
 | [Testing & local dev](../02_architecture/testing-and-local-dev.md) | Local setup, per-phase smoke tests, Slack stub, live runbook |
+| [Design direction](../04_knowledge/design-direction.md) | UI/UX system (Resend + Steady + Geekbot synthesis) — source of truth for all UI |
 
 ## Decisions (ADRs)
 
