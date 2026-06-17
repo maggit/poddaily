@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { getTeam, listMembers, addMember, setMemberPermissions, removeMember } from "@/lib/teams";
 import { PageHeader } from "@/components/page-header";
@@ -39,6 +40,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
     <div className="space-y-6">
       <PageHeader title={team.name} />
       <div className="text-sm text-muted-foreground">#{team.slackChannelName}{team.tribe ? ` · ${team.tribe}` : ""}</div>
+      <Link href={`/teams/${id}/standup`} className="text-[13px] font-medium text-accent hover:underline">Configure standup →</Link>
       <section className="space-y-3">
         <h2 className="text-[15px] font-medium">Members</h2>
         <MemberTable members={members} setPermAction={setPermAction} removeAction={removeAction} />
