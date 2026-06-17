@@ -21,7 +21,9 @@ export const authConfig = {
       issuer: SLACK_BASE,
       clientId: process.env.SLACK_CLIENT_ID,
       clientSecret: process.env.SLACK_CLIENT_SECRET,
-      checks: ["pkce", "state"],
+      // Slack always returns a `nonce` claim, so Auth.js must send + validate one — matches the
+      // official next-auth Slack provider. (pkce/state alone left an empty nonce → rejected.)
+      checks: ["nonce"],
       authorization: { params: { scope: "openid profile email" } },
       profile(profile: SlackOidcProfile) {
         return mapSlackProfile(profile);
