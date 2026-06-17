@@ -25,6 +25,10 @@ FROM base AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
+# Next standalone reads HOSTNAME; Docker/Railway set it to the container hostname, which would
+# make the server bind to that name instead of all interfaces → unreachable behind the proxy
+# (502). Force 0.0.0.0 so it listens on every interface.
+ENV HOSTNAME=0.0.0.0
 # Next standalone output (monorepo: server.js is nested under apps/web)
 COPY --from=build /app/apps/web/.next/standalone ./
 COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static
