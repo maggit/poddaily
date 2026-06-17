@@ -1,5 +1,4 @@
-import { eq } from "drizzle-orm";
-import { schema } from "@poddaily/db";
+import { eq, schema } from "@poddaily/db";
 import type { Team, TeamMember } from "@poddaily/db/schema";
 import { db } from "./db";
 
