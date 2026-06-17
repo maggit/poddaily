@@ -28,6 +28,7 @@ export default async function StandupConfigPage({ params }: { params: Promise<{ 
     const [h, m] = String(fd.get("time") ?? "10:00").split(":").map(Number);
     if (cleaned.length === 0) throw new Error("At least one question is required");
     if (weekdayNums.length === 0) throw new Error("Pick at least one weekday");
+    if (Number.isNaN(h) || Number.isNaN(m)) throw new Error("A valid time is required");
     await upsertStandup(id, {
       questions: cleaned,
       scheduleCron: cronFromWeekly({ weekdays: weekdayNums, hour: h, minute: m }),
