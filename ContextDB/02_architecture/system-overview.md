@@ -67,5 +67,9 @@ therefore omits a `postgres` service and `pgdata` volume; it keeps `web`, `api`,
 
 ## Deployment
 
-Dokploy on ROSA/EKS. `NEXTAUTH_URL=https://poddaily.clara.tools`. Env via `.env` per the
-[Phase 1 spec env list](../01_specs/phase-1-core-spec.md#11-environment-variables-phase-1).
+**Railway** (services built from per-app Dockerfiles) with a **Supabase cloud** Postgres and a
+Railway Redis plugin — see the [Railway + Supabase runbook](deployment-railway.md) and the
+[deployment ADR](../03_decisions/2026-06-17-railway-supabase-deployment.md). The web app is
+deployable today via `Dockerfile.web` (Next.js standalone); `api`/`worker`/Redis land in Step 5.
+Env per the [Phase 1 spec env list](../01_specs/phase-1-core-spec.md#11-environment-variables-phase-1)
++ the runbook's service-var table.
