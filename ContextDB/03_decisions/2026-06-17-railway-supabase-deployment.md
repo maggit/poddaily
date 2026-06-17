@@ -1,7 +1,9 @@
 # ADR: Deploy on Railway with a Supabase cloud database
 
 - **Date:** 2026-06-17
-- **Status:** Accepted (config prepared; first deploy at Step 5)
+- **Status:** Superseded by [Host on Dokploy](2026-06-17-switch-to-dokploy.md) — Railway hit a
+  502 from edge port routing; we moved to Dokploy (fixed-port Traefik routing). Railway remains
+  a documented alternative; the Docker image is identical.
 
 ## Context
 

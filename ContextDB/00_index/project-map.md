@@ -22,7 +22,7 @@ tools that runs on internal infrastructure with no per-seat cost.
 | [Slack integration](../02_architecture/slack-integration.md) | Three OAuth surfaces, DM engine, broadcast |
 | [Scheduler](../02_architecture/scheduler.md) | Per-user-TZ BullMQ scheduling |
 | [Testing & local dev](../02_architecture/testing-and-local-dev.md) | Local setup, per-phase smoke tests, Slack stub, live runbook |
-| [Deployment (Railway + Supabase)](../02_architecture/deployment-railway.md) | From-zero hosting runbook (Supabase cloud, Railway services, env, migrations) |
+| [Deployment (Dokploy + Supabase)](../02_architecture/deployment-dokploy.md) | From-zero hosting runbook — the chosen host (Railway alt: [deployment-railway](../02_architecture/deployment-railway.md)) |
 | [Design direction](../04_knowledge/design-direction.md) | UI/UX system (Resend + Steady + reference-layout synthesis) — source of truth for all UI |
 
 ## Decisions (ADRs)
@@ -36,7 +36,8 @@ tools that runs on internal infrastructure with no per-seat cost.
 | [Vertical-slice build order](../03_decisions/2026-06-14-vertical-slice-build.md) | Build one feature end-to-end first |
 | [Stateless DM state](../03_decisions/2026-06-14-stateless-dm-state.md) | Reconstruct conversation state from Postgres |
 | [E2E smoke via Slack stub](../03_decisions/2026-06-14-e2e-smoke-with-slack-stub.md) | Per-phase smoke test with a stubbed Slack + live checklist |
-| [Railway + Supabase deployment](../03_decisions/2026-06-17-railway-supabase-deployment.md) | Host on Railway with Supabase cloud DB (replaces Dokploy) |
+| [Railway + Supabase deployment](../03_decisions/2026-06-17-railway-supabase-deployment.md) | ~~Host on Railway~~ — superseded (502 from edge port routing) |
+| [Host on Dokploy](../03_decisions/2026-06-17-switch-to-dokploy.md) | Host on Dokploy (fixed-port Traefik routing); Supabase cloud DB |
 
 ## Diagrams
 

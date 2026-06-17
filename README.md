@@ -33,7 +33,7 @@ See the full [roadmap](#roadmap) and the [PRD](ContextDB/01_specs/poddaily-prd.m
 
 Next.js 15 · Hono.js (Node 22) · BullMQ + Redis · PostgreSQL 16 (Supabase, managed) ·
 Drizzle ORM · NextAuth v5 (Slack OAuth) · Tailwind + shadcn/ui · `@slack/bolt` ·
-Railway. Monorepo via pnpm workspaces.
+Dokploy. Monorepo via pnpm workspaces.
 
 ## Quick start
 
@@ -78,10 +78,11 @@ See [Testing & Local Dev](ContextDB/02_architecture/testing-and-local-dev.md).
 
 ## Deployment
 
-Hosted on **Railway** with a **Supabase cloud** Postgres. Each app is a Railway service built
-from a Dockerfile (`web`, plus `api`/`worker` from Step 5); Redis is a Railway plugin. The web
-app is deployable today (`Dockerfile.web`, Next.js standalone). Full step-by-step:
-**[Railway + Supabase deployment runbook](ContextDB/02_architecture/deployment-railway.md)**.
+Hosted on **Dokploy** (self-hosted, Docker + Traefik) with a **Supabase cloud** Postgres. Each
+app is a Docker service (`web` now via `Dockerfile.web`; `api`/`worker`/Redis from Step 5 via
+`docker-compose.dokploy.yml`). Full step-by-step:
+**[Dokploy + Supabase runbook](ContextDB/02_architecture/deployment-dokploy.md)** (Railway is a
+documented alternative — same image — in the [Railway runbook](ContextDB/02_architecture/deployment-railway.md)).
 
 ## Project context & docs
 
