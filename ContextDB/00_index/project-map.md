@@ -49,10 +49,12 @@ just-in-time so each reflects what the prior step produced.
 
 - ✅ [Step 1 — Foundation](../todos/2026-06-14-phase1-step1-foundation-plan.md) — **DONE** (merged `c540192`): monorepo, db, shared, local infra, `smoke:db`.
 - ✅ [Step 2 — Slack manifest + admin NextAuth login](../todos/2026-06-15-phase1-step2-auth-plan.md) — **DONE** (merged `d804e4f`): `apps/web`, Slack OIDC login, route protection, `tools/slack-stub`, `smoke:auth`.
-- 🚧 Step 3 — team create + add member (captures TZ) (`smoke:team`). [Design direction](../04_knowledge/design-direction.md) locked (indigo accent), [admin-CRUD ADR](../03_decisions/2026-06-16-admin-crud-via-next-server.md).
-  - ✅ Part 1 — design system + app shell + login restyle — **DONE** (merged `2e4df1a`): single-source theme tokens, dark premium login, light app shell, themable StatusPill.
-  - 🚧 Part 2 — team/member CRUD (teams list, create-team form, member table) via Next server-side — next.
-- Steps 4–7 — authored before each is executed.
+- ✅ Step 3 — team create + add member (captures TZ) (`smoke:team`). [Design direction](../04_knowledge/design-direction.md) (indigo accent), [admin-CRUD ADR](../03_decisions/2026-06-16-admin-crud-via-next-server.md).
+  - ✅ Part 1 — design system + app shell + login restyle — **DONE** (merged `2e4df1a`).
+  - ✅ Part 2 — team/member CRUD via Next server-side — **DONE** (merged PR #2, `7292ec0`).
+- 🚧 [Step 4 — standup configuration](../todos/2026-06-17-phase1-step4-standup-config-plan.md) (questions + schedule + intro/outro, `smoke:config`) — in PR.
+- 🚧 Step 5 — scheduler + `send-standup-dm` + DM Q&A engine (`apps/api` + `apps/worker`, `smoke:standup`) — the core; next.
+- Steps 6–7 — authored before each is executed.
 
 ## Logs
 
