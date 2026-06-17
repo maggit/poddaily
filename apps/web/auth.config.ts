@@ -5,6 +5,9 @@ import { mapSlackProfile, type SlackOidcProfile } from "./lib/slack-profile";
 const SLACK_BASE = process.env.SLACK_OIDC_BASE ?? "https://slack.com";
 
 export const authConfig = {
+  // Self-hosted behind a reverse proxy (Dokploy/Traefik) on a non-Vercel host — trust the
+  // proxied host header, else Auth.js v5 throws UntrustedHost. Same as AUTH_TRUST_HOST=true.
+  trustHost: true,
   pages: { signIn: "/login" },
   providers: [
     {
