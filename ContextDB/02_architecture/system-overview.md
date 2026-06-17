@@ -67,9 +67,11 @@ therefore omits a `postgres` service and `pgdata` volume; it keeps `web`, `api`,
 
 ## Deployment
 
-**Railway** (services built from per-app Dockerfiles) with a **Supabase cloud** Postgres and a
-Railway Redis plugin — see the [Railway + Supabase runbook](deployment-railway.md) and the
-[deployment ADR](../03_decisions/2026-06-17-railway-supabase-deployment.md). The web app is
-deployable today via `Dockerfile.web` (Next.js standalone); `api`/`worker`/Redis land in Step 5.
-Env per the [Phase 1 spec env list](../01_specs/phase-1-core-spec.md#11-environment-variables-phase-1)
-+ the runbook's service-var table.
+**Dokploy** (self-hosted, Docker + Traefik) with a **Supabase cloud** Postgres — see the
+[Dokploy + Supabase runbook](deployment-dokploy.md) and the
+[deployment ADR](../03_decisions/2026-06-17-switch-to-dokploy.md). The web app is deployable
+today via `Dockerfile.web` (Next.js standalone, binds `0.0.0.0:3000`); the full stack
+(`web`+`api`+`worker`+`redis`) runs from `docker-compose.dokploy.yml` at Step 5. Railway is a
+documented alternative (same image). Env per the
+[Phase 1 spec env list](../01_specs/phase-1-core-spec.md#11-environment-variables-phase-1) + the
+runbook's service-var table.
