@@ -16,8 +16,8 @@ Checked items are implemented; unchecked are planned. Updated at the end of each
 
 **Phase 1 — Core**
 - [x] Slack OAuth admin login
-- [ ] Team CRUD (name, Slack channel, tribe)
-- [ ] Member management with per-member permissions + timezone capture
+- [x] Team CRUD (name, Slack channel, tribe)
+- [x] Member management with per-member permissions + timezone capture
 - [ ] Standup configuration (questions, schedule, intro/outro)
 - [ ] Per-user-timezone scheduler
 - [ ] Conversational DM Q&A (one question at a time, skip / skip all, timeout)
