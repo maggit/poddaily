@@ -17,6 +17,7 @@ export function anchorDate(scheduleTz: string, instant: Date): string {
 export function isActiveWeekday(cron: string, scheduleTz: string, instant: Date): boolean {
   const { weekdays } = parseWeeklyCron(cron);
   const dt = DateTime.fromJSDate(instant, { zone: scheduleTz });
+  if (!dt.isValid) throw new Error(`Invalid instant/zone: ${instant.toISOString()} / ${scheduleTz}`);
   return weekdays.includes(luxonToCronDow(dt.weekday));
 }
 
@@ -25,6 +26,11 @@ export function isActiveWeekday(cron: string, scheduleTz: string, instant: Date)
  * anchored on `anchorDateISO` (a YYYY-MM-DD date in the standup's scheduleTz),
  * at the standup's configured local time. Luxon resolves the IANA offset
  * (including DST) for that wall-clock time in `memberTz`.
+ *
+ * DST note: on a spring-forward day a nonexistent wall-clock time (e.g. 02:30
+ * in US/Eastern zones) is shifted forward by Luxon's gap-handling and `isValid`
+ * stays true; this is acceptable because standup times are configured well
+ * outside the gap.
  */
 export function computeSendInstant(cron: string, memberTz: string, anchorDateISO: string): Date {
   const { hour, minute } = parseWeeklyCron(cron);
