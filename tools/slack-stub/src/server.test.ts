@@ -34,3 +34,42 @@ describe("slack oidc stub", () => {
     expect(body.email).toContain("@");
   });
 });
+
+async function postForm(url: string, body: Record<string, string>) {
+  return fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(body).toString(),
+  });
+}
+
+describe("slack web api stub", () => {
+  it("conversations.open returns a deterministic DM channel id", async () => {
+    const res = await postForm(`${stub.url}/api/conversations.open`, { users: "U123" });
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.channel.id).toMatch(/^D/);
+    // deterministic for the same user
+    const res2 = await postForm(`${stub.url}/api/conversations.open`, { users: "U123" });
+    expect((await res2.json()).channel.id).toBe(body.channel.id);
+  });
+
+  it("chat.postMessage records the message and returns a ts", async () => {
+    await postForm(`${stub.url}/__stub/reset`, {});
+    const res = await postForm(`${stub.url}/api/chat.postMessage`, { channel: "D1", text: "hello world" });
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.ts).toBeTruthy();
+
+    const log = await (await fetch(`${stub.url}/__stub/messages`)).json();
+    expect(log).toHaveLength(1);
+    expect(log[0]).toMatchObject({ channel: "D1", text: "hello world" });
+  });
+
+  it("reset clears the recorded messages", async () => {
+    await postForm(`${stub.url}/api/chat.postMessage`, { channel: "D1", text: "x" });
+    await postForm(`${stub.url}/__stub/reset`, {});
+    const log = await (await fetch(`${stub.url}/__stub/messages`)).json();
+    expect(log).toHaveLength(0);
+  });
+});
