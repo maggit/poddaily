@@ -68,6 +68,8 @@ async function main() {
         await openRun({ db, enqueueSend: makeEnqueueSend(queue) }, standupId, new Date());
       } else if (job.name === "send-dm") {
         await sendDm({ db, slack }, job.data as SendDmJob);
+      } else {
+        throw new Error(`[worker] unknown job name: ${job.name}`);
       }
     },
     { connection: redisConnection() },
@@ -76,11 +78,19 @@ async function main() {
   worker.on("failed", (job, err) => console.error(`[worker] job ${job?.id} (${job?.name}) failed:`, err.message));
   worker.on("completed", (job) => console.log(`[worker] job ${job.id} (${job.name}) done`));
   console.log("[worker] started");
+
+  // Graceful shutdown so in-flight jobs aren't left stalled on container stop.
+  const shutdown = async () => {
+    console.log("[worker] shutting down");
+    await worker.close();
+    await queue.close();
+    process.exit(0);
+  };
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 }
 
 main().catch((err) => {
   console.error("[worker] fatal:", err);
   process.exit(1);
 });
-
-export { enqueueOpenRun };
