@@ -65,6 +65,7 @@ describe("openRun", () => {
     const second: SendDmJob[] = [];
     const r2 = await openRun({ db, enqueueSend: async (j) => { second.push(j); } }, standupId, now);
     expect(second).toHaveLength(0);
+    expect(r2.runId).toBeNull();
     expect(r2.enqueued).toBe(0);
     const runs = await sql`select count(*)::int as n from standup_runs where standup_id = ${standupId}`;
     expect(runs[0].n).toBe(1);
