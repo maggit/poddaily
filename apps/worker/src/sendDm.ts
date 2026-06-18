@@ -32,6 +32,9 @@ export async function sendDm(deps: SendDmDeps, job: SendDmJob): Promise<void> {
     .limit(1);
   const q1Text = interpolateLastReportDate(firstQuestion.text, last?.reportedAt ?? null);
 
+  // Idempotency boundary: the existence-check above only guards once the report
+  // row exists. If a post throws mid-way (before the insert below), a BullMQ retry
+  // re-runs from the top and may re-post — acceptable at-least-once for Phase 1.
   const channelId = await slack.openDm(slackUserId);
   let firstTs: string | null = null;
   if (standup.introMessage) {
