@@ -119,8 +119,9 @@ send-standup-dm  (one per member; BullMQ retries 3× exponential backoff)
 
 ### 4.6 Defaults / null handling
 
-- `{last_report_date}` ← the member's most recent `completed` report date; no history →
-  `"last time"`.
+- `{last_report_date}` ← the member's most recent `completed` report date, via the **existing**
+  `interpolateLastReportDate` helper in `packages/shared/src/dates.ts`; no history → its built-in
+  fallback `"your last report"`. (Reuse the helper — do not reinvent.)
 - Null `introMessage` → skip the intro post, send Q1 alone.
 - Null member `timezone` → fall back to `standups.scheduleTz`.
 
