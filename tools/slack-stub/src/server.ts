@@ -24,6 +24,7 @@ function readBody(req: import("node:http").IncomingMessage): Promise<URLSearchPa
     let raw = "";
     req.on("data", (c) => (raw += c));
     req.on("end", () => resolve(new URLSearchParams(raw)));
+    req.on("error", () => resolve(new URLSearchParams())); // fail-open so the stub never wedges
   });
 }
 
