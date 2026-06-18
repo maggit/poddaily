@@ -55,8 +55,8 @@ just-in-time so each reflects what the prior step produced.
 - ✅ Step 3 — team create + add member (captures TZ) (`smoke:team`). [Design direction](../04_knowledge/design-direction.md) (indigo accent), [admin-CRUD ADR](../03_decisions/2026-06-16-admin-crud-via-next-server.md).
   - ✅ Part 1 — design system + app shell + login restyle — **DONE** (merged `2e4df1a`).
   - ✅ Part 2 — team/member CRUD via Next server-side — **DONE** (merged PR #2, `7292ec0`).
-- 🚧 [Step 4 — standup configuration](../todos/2026-06-17-phase1-step4-standup-config-plan.md) (questions + schedule + intro/outro, `smoke:config`) — in PR.
-- 🚧 Step 5 — scheduler + `send-standup-dm` + DM Q&A engine (`apps/api` + `apps/worker`, `smoke:standup`) — the core; next.
+- ✅ [Step 4 — standup configuration](../todos/2026-06-17-phase1-step4-standup-config-plan.md) — **DONE** (merged PR #3, `b8e274d`): questions + schedule + intro/outro, `smoke:config`.
+- 🚧 Step 5 — scheduler + `send-standup-dm` + DM Q&A engine (`apps/api` + `apps/worker`, `smoke:standup`) — the core; **next**.
 - Steps 6–7 — authored before each is executed.
 
 ## Logs
