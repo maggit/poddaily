@@ -29,5 +29,10 @@ export function makeEnqueueSend(queue: Queue): EnqueueSend {
 
 /** Enqueue an open-run job to fire immediately (used by trigger + scheduler tick). */
 export async function enqueueOpenRun(queue: Queue, standupId: string): Promise<void> {
-  await queue.add("open-run", { standupId }, { removeOnComplete: true, removeOnFail: false });
+  await queue.add("open-run", { standupId }, {
+    attempts: 3,
+    backoff: { type: "exponential", delay: 30_000 },
+    removeOnComplete: true,
+    removeOnFail: false,
+  });
 }
