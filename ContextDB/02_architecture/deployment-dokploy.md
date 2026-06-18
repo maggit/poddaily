@@ -29,11 +29,15 @@ Dokploy host (Docker + Traefik)
 
 ## Part A — Supabase (same as before)
 
-1. Create the project at <https://supabase.com>; grab the **Transaction pooler** URL (port
-   `6543`) → `DATABASE_URL`, and the **Direct** URL (port `5432`) → `DIRECT_URL`.
-2. Run migrations from your laptop against the direct URL:
+1. Create the project at <https://supabase.com>. From the **Connect** dialog grab the
+   **Transaction pooler** URL (port `6543`) → `DATABASE_URL`, and the **Session pooler** URL
+   (same `…pooler.supabase.com` host, port `5432`) → `DIRECT_URL`. Both are IPv4; the *direct*
+   `db.<ref>.supabase.co` endpoint is IPv6-only — avoid it (see the gotcha in Part C).
+2. **Migrations run automatically on deploy** (the web container migrates on boot against
+   `DIRECT_URL`). You only need to migrate manually if you want the schema ready *before* the
+   first deploy or to seed data:
    ```bash
-   DIRECT_URL="postgresql://postgres:<pw>@db.<ref>.supabase.co:5432/postgres" pnpm db:migrate
+   DIRECT_URL="postgresql://postgres.<ref>:<pw>@aws-0-<region>.pooler.supabase.com:5432/postgres" pnpm db:migrate
    ```
 
 ## Part B — Deploy the web app (now)
@@ -60,16 +64,31 @@ Two options; the **Application** path is simplest for the single web service tod
 
 | Var | Value |
 |---|---|
-| `DATABASE_URL` | Supabase **pooler** (6543) |
+| `DATABASE_URL` | Supabase **transaction pooler** — host `…pooler.supabase.com`, port **6543**, user `postgres.<ref>` (IPv4; runtime queries) |
+| `DIRECT_URL` | Supabase **session pooler** — same host, port **5432**, user `postgres.<ref>` (IPv4; used by the on-boot migration) |
 | `AUTH_SECRET` | `openssl rand -base64 32` |
 | `NEXTAUTH_SECRET` | same value |
 | `NEXTAUTH_URL` | `https://<your-dokploy-domain>` |
 | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | from the Slack app |
 | `INTERNAL_API_SECRET` | `openssl rand -hex 32` (shared with api/worker at Step 5) |
 
+> **IPv4 / Supabase gotcha:** use the **pooler** host (`…pooler.supabase.com`, user
+> `postgres.<ref>`) for both URLs. The *direct* endpoint (`db.<ref>.supabase.co:5432`) is
+> **IPv6-only** and self-hosted Docker hosts usually can't route it (`ENETUNREACH`). Pooler =
+> IPv4: **6543** transaction mode for runtime, **5432** session mode for migrations (DDL needs
+> a session). Copy both strings from Supabase's **Connect** dialog rather than hand-building them.
+
 `PORT` and `HOSTNAME` are already baked into the image (`3000` / `0.0.0.0`) — no need to set
 them. Do not set a build-time `DATABASE_URL`; the Dockerfile bakes a throwaway dummy for the
 build stage only.
+
+### Migrations run automatically on deploy
+The web container's entrypoint runs `node migrate.mjs` (a bundled drizzle migrator) **before**
+starting the server, applying any pending migrations against `DIRECT_URL`. So a normal deploy
+migrates the schema — no manual step. It's idempotent (drizzle tracks applied migrations) and
+**non-blocking**: if a migration fails it logs `[migrate] failed:` / a `WARNING` and still
+starts the server (so `/login` stays up) — watch the deploy logs for that line. Assumes a
+single web replica (`replicas: 1`); for multiple replicas, move migration to a one-off step.
 
 ## Part D — Slack app
 
