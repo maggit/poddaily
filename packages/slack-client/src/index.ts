@@ -17,23 +17,22 @@ export function createSlackClient(opts: SlackClientOptions = {}): SlackClient {
   const token = opts.token ?? process.env.SLACK_BOT_TOKEN;
   const baseUrl = opts.baseUrl ?? process.env.SLACK_API_BASE_URL;
   const slackApiUrl = baseUrl
-    ? `${baseUrl.replace(/\/$/, "")}/api/`
+    ? `${baseUrl.replace(/\/+$/, "").replace(/\/api$/, "")}/api/`
     : undefined; // WebClient defaults to https://slack.com/api/
-  const web = new WebClient(token, slackApiUrl ? { slackApiUrl } : {});
+  const web = new WebClient(token, {
+    ...(slackApiUrl ? { slackApiUrl } : {}),
+    retryConfig: { retries: 3 },
+  });
 
   return {
     async openDm(slackUserId) {
       const res = await web.conversations.open({ users: slackUserId });
-      if (!res.ok || !res.channel?.id) {
-        throw new Error(`conversations.open failed: ${res.error ?? "unknown"}`);
-      }
+      if (!res.channel?.id) throw new Error("conversations.open returned no channel id");
       return res.channel.id;
     },
     async postMessage(channel, text) {
       const res = await web.chat.postMessage({ channel, text });
-      if (!res.ok || !res.ts) {
-        throw new Error(`chat.postMessage failed: ${res.error ?? "unknown"}`);
-      }
+      if (!res.ts) throw new Error("chat.postMessage returned no ts");
       return res.ts;
     },
   };

@@ -22,4 +22,14 @@ describe("slack-client", () => {
     const log = await (await fetch(`${stub.url}/__stub/messages`)).json();
     expect(log).toEqual([{ channel: "D1", text: "good morning" }]);
   });
+
+  it("works when baseUrl already ends in /api (no double /api/api/)", async () => {
+    await fetch(`${stub.url}/__stub/reset`, { method: "POST" });
+    const client = createSlackClient({ token: "xoxb-test", baseUrl: stub.url + "/api" });
+    const ts = await client.postMessage("D2", "trailing api test");
+    expect(ts).toBeTruthy();
+
+    const log = await (await fetch(`${stub.url}/__stub/messages`)).json();
+    expect(log).toEqual([{ channel: "D2", text: "trailing api test" }]);
+  });
 });
