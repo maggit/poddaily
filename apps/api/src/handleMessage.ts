@@ -39,6 +39,8 @@ export async function handleMessage(deps: HandleMessageDeps, msg: IncomingDm): P
     ))
     .orderBy(desc(schema.standupReports.createdAt))
     .limit(1);
+  // Concurrent distinct messages from the same user are last-write-wins. Acceptable at
+  // human typing cadence; the reducer's purity guards redelivery, not concurrency.
   if (!report || !report.runId) return; // no open report — ignore stray DM
 
   const [run] = await db.select().from(schema.standupRuns).where(eq(schema.standupRuns.id, report.runId));
@@ -53,6 +55,8 @@ export async function handleMessage(deps: HandleMessageDeps, msg: IncomingDm): P
       return;
 
     case "abort":
+      // timed_out rows keep reportedAt at its insert-time defaultNow(); downstream consumers
+      // must filter on status (e.g. sendDm's last_report_date lookup filters status = "completed").
       await db.update(schema.standupReports)
         .set({ status: "timed_out" })
         .where(eq(schema.standupReports.id, report.id));
