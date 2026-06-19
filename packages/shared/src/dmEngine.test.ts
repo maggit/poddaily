@@ -56,4 +56,14 @@ describe("advanceReport", () => {
     ];
     expect(advanceReport({ questions: Q, answers, message: "late reply" })).toEqual({ kind: "noop" });
   });
+
+  it("returns noop when there are no questions (misconfigured)", () => {
+    expect(advanceReport({ questions: [], answers: [], message: "hi" })).toEqual({ kind: "noop" });
+  });
+
+  it("records a whitespace-only reply as an empty answer and advances (documents current behavior)", () => {
+    const out = advanceReport({ questions: Q, answers: [], message: "   " });
+    expect(out.kind).toBe("next");
+    if (out.kind === "next") expect(out.answers[0].answer).toBe("");
+  });
 });
