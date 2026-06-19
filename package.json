@@ -14,7 +14,8 @@
     "smoke:auth": "vitest run apps/web/tests/auth-smoke.test.ts tools/slack-stub/src/server.test.ts",
     "smoke:team": "vitest run apps/web/tests/teams-smoke.test.ts apps/web/lib/teams.test.ts",
     "smoke:config": "vitest run apps/web/tests/config-smoke.test.ts apps/web/lib/standups.test.ts packages/shared/src/schedule.test.ts",
-    "smoke:standup-outbound": "vitest run apps/worker/tests/standup-outbound-smoke.test.ts"
+    "smoke:standup-outbound": "vitest run apps/worker/tests/standup-outbound-smoke.test.ts",
+    "smoke:standup": "vitest run apps/api/tests/standup-smoke.test.ts packages/shared/src/dmEngine.test.ts apps/api/src/handleMessage.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22",
