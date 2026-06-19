@@ -77,6 +77,40 @@ against the stub's recorded calls) plus skip / skip-all / timeout edges. See the
 
 You can also click around the admin UI at `http://localhost:3000`.
 
+### Run the standup worker (Step 5a)
+
+The worker schedules and sends standup DMs via BullMQ. It needs Redis — which is already
+started in step 1. Once the web app and worker are both running:
+
+```bash
+pnpm --filter @poddaily/worker dev   # boots the scheduler + DM worker
+```
+
+**Local demo walk:**
+1. Make sure you have an active standup with at least one `can_report` member (the seed gives
+   you this; or create one via the admin UI).
+2. Note the standup's `id` (visible in the URL on the standup config page, or via the DB).
+3. Trigger a run immediately (instead of waiting for the 00:05 daily tick):
+   ```bash
+   pnpm --filter @poddaily/worker trigger <standupId>
+   ```
+4. The worker opens a `standup_run` row and fans out a `send-standup-dm` job per member.
+5. Against the stub: the Slack stub (`:4010`) records the `conversations.open` and
+   `chat.postMessage` calls. Against a real Slack workspace: the member receives the intro
+   message (if configured) + Q1 in a Slack DM.
+6. Confirm a `standup_reports` row was created with `status = 'in_progress'` for that member.
+
+**Smoke (automated):**
+```bash
+pnpm smoke:standup-outbound   # runs against real Redis + Slack stub
+```
+This boots a BullMQ queue+worker, triggers a run for the seeded standup, and asserts that
+the stub received the expected Slack API calls and the DB has an `in_progress` report row.
+
+> **`pnpm test` requires Redis up** (`docker compose up -d redis`) from Step 5a onwards.
+> The `smoke:standup-outbound` suite runs as part of the default `vitest` run. This is a
+> conscious choice, consistent with Postgres already being required for `pnpm test`.
+
 ---
 
 ## Track B — Live end-to-end (real Supabase + real Slack)

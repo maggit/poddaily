@@ -60,3 +60,23 @@ remove and recreate that standup's repeatable job so the next run reflects the n
 The per-member local-send-instant computation (cron + IANA tz + "today") is a **pure
 function** in `packages/shared` and is unit-tested independently of BullMQ — including DST
 boundaries and members in different zones.
+
+## Locked decisions (implemented in 5a)
+
+These rules are implemented and frozen — they are the canonical behaviour for the scheduler.
+
+**Canonical date anchor.** A run is anchored on calendar date D in the standup's
+`scheduleTz`. "Is today an active weekday?" is evaluated once in `scheduleTz` at tick time.
+Each member is then DM'd at their own local configured time on that same date D, regardless
+of what the UTC wall-clock shows in their timezone.
+
+**Derived tick cron (00:05 in `scheduleTz`).** The BullMQ job scheduler fires at **00:05 in
+the standup's `scheduleTz`** on active weekdays. The tick cron is derived from the standup's
+`schedule_cron` — same weekday expression, time overridden to `00:05`. One BullMQ repeatable
+"job scheduler" exists per active standup, keyed by standup id.
+
+**Idempotency constraints.**
+- `standup_runs (standup_id, scheduled_date)` — unique; opening a run for a given standup on
+  a given date is idempotent (subsequent ticks on the same day are no-ops).
+- `standup_reports (run_id, slack_user_id)` — unique; fan-out jobs that fire more than once
+  for the same member + run cannot double-insert a report.
