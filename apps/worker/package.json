@@ -1,0 +1,23 @@
+{
+  "name": "@poddaily/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "trigger": "tsx src/trigger.ts",
+    "reconcile": "tsx src/reconcile-cli.ts"
+  },
+  "dependencies": {
+    "@poddaily/db": "workspace:*",
+    "@poddaily/shared": "workspace:*",
+    "@poddaily/slack-client": "workspace:*",
+    "bullmq": "^5.34.0"
+  },
+  "devDependencies": {
+    "@poddaily/slack-stub": "workspace:*",
+    "tsx": "^4.16.0"
+  }
+}

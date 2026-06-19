@@ -1,0 +1,78 @@
+import { describe, it, expect, beforeEach, afterAll, beforeAll } from "vitest";
+import { createDb } from "@poddaily/db";
+import { cronFromWeekly } from "@poddaily/shared";
+import { createSlackClient } from "@poddaily/slack-client";
+import { startSlackStub, type SlackStub } from "@poddaily/slack-stub";
+import { sendDm } from "./sendDm";
+
+const { db, sql } = createDb();
+const CHAN = "C_SENDDM";
+const CRON = cronFromWeekly({ weekdays: [1, 2, 3, 4, 5], hour: 9, minute: 0 });
+
+let stub: SlackStub;
+beforeAll(async () => { stub = await startSlackStub(0); });
+afterAll(async () => { await stub.close(); await sql.end(); });
+
+async function seedRun(intro: string | null) {
+  const [team] = await sql`insert into teams (name, slack_channel_id, slack_channel_name) values ('SendDm Pod', ${CHAN}, 'senddm-pod') returning id`;
+  const [s] = await sql`
+    insert into standups (team_id, name, questions, schedule_cron, schedule_tz, intro_message, is_active)
+    values (${team.id}, 'Daily Standup',
+            ${JSON.stringify([{ id: "q1", text: "What have you done since {last_report_date}?", type: "text" }])},
+            ${CRON}, 'UTC', ${intro}, true)
+    returning id`;
+  const [run] = await sql`insert into standup_runs (standup_id, scheduled_at, scheduled_date, status) values (${s.id}, now(), current_date, 'running') returning id`;
+  return { standupId: s.id as string, runId: run.id as string };
+}
+
+beforeEach(async () => {
+  await fetch(`${stub.url}/__stub/reset`, { method: "POST" });
+  await sql`delete from standup_reports where slack_user_id = 'U_SEND'`;
+  await sql`delete from standup_runs where standup_id in (select id from standups where team_id in (select id from teams where slack_channel_id = ${CHAN}))`;
+  await sql`delete from standups where team_id in (select id from teams where slack_channel_id = ${CHAN})`;
+  await sql`delete from teams where slack_channel_id = ${CHAN}`;
+});
+
+describe("sendDm", () => {
+  it("opens a DM, posts intro + interpolated Q1, inserts an in_progress report", async () => {
+    const { standupId, runId } = await seedRun("Good morning! :wave:");
+    const slack = createSlackClient({ token: "xoxb-test", baseUrl: stub.url });
+
+    await sendDm({ db, slack }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
+
+    const log = await (await fetch(`${stub.url}/__stub/messages`)).json();
+    expect(log).toHaveLength(2); // intro + Q1
+    expect(log[0].text).toBe("Good morning! :wave:");
+    expect(log[1].text).toContain("What have you done since");
+    expect(log[1].text).toContain("your last report"); // no prior report → fallback
+
+    const reports = await sql`select * from standup_reports where run_id = ${runId} and slack_user_id = 'U_SEND'`;
+    expect(reports).toHaveLength(1);
+    expect(reports[0].status).toBe("in_progress");
+    expect(reports[0].answers).toEqual([]);
+    expect(reports[0].dm_thread_ts).toBeTruthy();
+  });
+
+  it("skips the intro post when introMessage is null (Q1 only)", async () => {
+    const { standupId, runId } = await seedRun(null);
+    const slack = createSlackClient({ token: "xoxb-test", baseUrl: stub.url });
+    await sendDm({ db, slack }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
+    const log = await (await fetch(`${stub.url}/__stub/messages`)).json();
+    expect(log).toHaveLength(1);
+    expect(log[0].text).toContain("What have you done since");
+  });
+
+  it("is safe to retry — a second call does not double-insert the report or repost", async () => {
+    const { standupId, runId } = await seedRun(null);
+    const slack = createSlackClient({ token: "xoxb-test", baseUrl: stub.url });
+    const job = { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" };
+    await sendDm({ db, slack }, job);
+    await fetch(`${stub.url}/__stub/reset`, { method: "POST" });
+    await sendDm({ db, slack }, job);
+
+    const reports = await sql`select count(*)::int as n from standup_reports where run_id = ${runId} and slack_user_id = 'U_SEND'`;
+    expect(reports[0].n).toBe(1);
+    const log = await (await fetch(`${stub.url}/__stub/messages`)).json();
+    expect(log).toHaveLength(0); // second call short-circuited before posting
+  });
+});

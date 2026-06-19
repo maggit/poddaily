@@ -1,5 +1,5 @@
 import {
-  pgTable, uuid, text, boolean, timestamp, jsonb, unique,
+  pgTable, uuid, text, boolean, timestamp, jsonb, unique, date,
 } from "drizzle-orm/pg-core";
 import type { Question, ReportAnswer } from "@poddaily/shared";
 
@@ -44,11 +44,12 @@ export const standupRuns = pgTable("standup_runs", {
   id: uuid("id").primaryKey().defaultRandom(),
   standupId: uuid("standup_id").references(() => standups.id),
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
+  scheduledDate: date("scheduled_date").notNull(),
   startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   status: text("status").default("pending"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => ({ uniqRunPerDay: unique().on(t.standupId, t.scheduledDate) }));
 
 export const standupReports = pgTable("standup_reports", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -61,7 +62,7 @@ export const standupReports = pgTable("standup_reports", {
   channelPostTs: text("channel_post_ts"),
   reportedAt: timestamp("reported_at", { withTimezone: true }).defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (t) => ({ uniqReportPerMember: unique().on(t.runId, t.slackUserId) }));
 
 export const slackUserTokens = pgTable("slack_user_tokens", {
   slackUserId: text("slack_user_id").primaryKey(),

@@ -6,6 +6,11 @@ export interface SlackStub {
   close: () => Promise<void>;
 }
 
+export interface RecordedMessage {
+  channel: string;
+  text: string;
+}
+
 const STUB_USER = {
   sub: "U_ADMIN_STUB",
   "https://slack.com/user_id": "U_ADMIN_STUB",
@@ -14,10 +19,34 @@ const STUB_USER = {
   picture: "https://stub.local/avatar.png",
 };
 
-export function startSlackStub(port = 4010): Promise<SlackStub> {
-  const server: Server = createServer((req, res) => {
-    const u = new URL(req.url ?? "/", "http://localhost");
+function readBody(req: import("node:http").IncomingMessage): Promise<URLSearchParams> {
+  return new Promise((resolve) => {
+    let raw = "";
+    req.on("data", (c) => (raw += c));
+    req.on("end", () => resolve(new URLSearchParams(raw)));
+    req.on("error", () => resolve(new URLSearchParams())); // fail-open so the stub never wedges
+  });
+}
 
+/** Deterministic fake DM channel id for a given user list. */
+function dmChannelId(users: string): string {
+  let hash = 0;
+  for (const ch of users) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return `D${hash.toString(36).toUpperCase()}`;
+}
+
+export function startSlackStub(port = 4010): Promise<SlackStub> {
+  const messages: RecordedMessage[] = [];
+  let tsCounter = 1000;
+
+  const server: Server = createServer(async (req, res) => {
+    const u = new URL(req.url ?? "/", "http://localhost");
+    const json = (status: number, payload: unknown) => {
+      res.writeHead(status, { "content-type": "application/json" });
+      res.end(JSON.stringify(payload));
+    };
+
+    // --- OIDC (admin auth) ---
     if (u.pathname === "/openid/connect/authorize") {
       const redirectUri = u.searchParams.get("redirect_uri") ?? "";
       const state = u.searchParams.get("state") ?? "";
@@ -25,24 +54,35 @@ export function startSlackStub(port = 4010): Promise<SlackStub> {
       res.writeHead(302, { location });
       return res.end();
     }
-
     if (u.pathname === "/api/openid.connect.token") {
-      res.writeHead(200, { "content-type": "application/json" });
-      return res.end(JSON.stringify({
-        ok: true,
-        access_token: "STUB_ACCESS_TOKEN",
-        token_type: "Bearer",
-        id_token: "stub.id.token",
-      }));
+      return json(200, { ok: true, access_token: "STUB_ACCESS_TOKEN", token_type: "Bearer", id_token: "stub.id.token" });
     }
-
     if (u.pathname === "/api/openid.connect.userInfo") {
-      res.writeHead(200, { "content-type": "application/json" });
-      return res.end(JSON.stringify({ ok: true, ...STUB_USER }));
+      return json(200, { ok: true, ...STUB_USER });
     }
 
-    res.writeHead(404, { "content-type": "application/json" });
-    res.end(JSON.stringify({ ok: false, error: "not_found" }));
+    // --- Web API (bot) ---
+    if (u.pathname === "/api/conversations.open") {
+      const body = await readBody(req);
+      const users = body.get("users") ?? "";
+      return json(200, { ok: true, channel: { id: dmChannelId(users) } });
+    }
+    if (u.pathname === "/api/chat.postMessage") {
+      const body = await readBody(req);
+      messages.push({ channel: body.get("channel") ?? "", text: body.get("text") ?? "" });
+      return json(200, { ok: true, ts: String(tsCounter++) });
+    }
+
+    // --- Test introspection ---
+    if (u.pathname === "/__stub/messages") {
+      return json(200, messages);
+    }
+    if (u.pathname === "/__stub/reset") {
+      messages.length = 0;
+      return json(200, { ok: true });
+    }
+
+    json(404, { ok: false, error: "not_found" });
   });
 
   return new Promise((resolve) => {

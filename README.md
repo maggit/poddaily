@@ -19,7 +19,7 @@ Checked items are implemented; unchecked are planned. Updated at the end of each
 - [x] Team CRUD (name, Slack channel, tribe)
 - [x] Member management with per-member permissions + timezone capture
 - [x] Standup configuration (questions, schedule, intro/outro)
-- [ ] Per-user-timezone scheduler
+- [x] Per-user-timezone scheduler (Step 5a — outbound DM only; Q&A engine in 5b)
 - [ ] Conversational DM Q&A (one question at a time, skip / skip all, timeout)
 - [ ] Channel broadcast posted as the user, threaded under a daily opening message
 
@@ -52,14 +52,32 @@ pnpm smoke:auth                   # admin Slack-login flow against the stub
 pnpm --filter @poddaily/web dev   # → http://localhost:3000 (signed out → /login)
 ```
 
-> **Current state (through Step 2):** the commands above work today — the database layer and
-> the admin web app with Slack OAuth login (`/login` → protected `/dashboard`). The multi-service
-> `pnpm dev` and the full `pnpm smoke:phase1` arrive as later build steps land — see the
+> **Current state (through Step 5a):** the commands above work today — the database layer,
+> the admin web app with Slack OAuth login, team/member/standup CRUD, and the scheduler +
+> outbound standup DM worker. The multi-service `pnpm dev` and the full `pnpm smoke:phase1`
+> arrive as later build steps land — see the
 > [build order](ContextDB/01_specs/phase-1-core-spec.md#9-build-order-vertical-slice).
+>
+> **`pnpm test` requires both Postgres and Redis** (`supabase start` + `docker compose up -d redis`)
+> — Redis is needed by the `smoke:standup-outbound` suite that runs as part of the default test run.
 
 For the **complete from-zero runbook** — creating a Supabase project, registering and
 configuring the Slack app (scopes, event URLs, tokens), tunnels, the reporter user-OAuth, and
 every environment variable — see **[Getting Started](ContextDB/00_index/getting-started.md)**.
+
+### Worker (scheduler + standup DMs)
+
+The worker schedules and sends standup DMs. It needs Redis:
+
+    docker compose up -d redis          # local Redis for BullMQ
+    pnpm --filter @poddaily/worker dev  # boots the scheduler + DM worker
+
+Trigger a run immediately (instead of waiting for the daily tick):
+
+    pnpm --filter @poddaily/worker trigger <standupId>
+
+Env: `REDIS_URL` (BullMQ), `SLACK_BOT_TOKEN` (bot DM posting). In tests/smoke,
+`SLACK_API_BASE_URL` points the bot client at the local Slack stub.
 
 ## Configuration
 
@@ -69,7 +87,11 @@ variable, where it comes from, and its local-vs-live value are documented in the
 
 ## Testing
 
-- `pnpm test` — unit + integration.
+- `pnpm test` — unit + integration. **Requires both Postgres and Redis** (`supabase start` +
+  `docker compose up -d redis`) — the `smoke:standup-outbound` suite runs as part of the
+  default test run and needs Redis (consistent with Postgres already being required).
+- `pnpm smoke:standup-outbound` — outbound DM smoke: boots a real BullMQ queue + worker against
+  Redis and the Slack stub, triggers a run, asserts DMs sent and `standup_reports` rows created.
 - `pnpm smoke:phase1` — end-to-end smoke against the whole stack with a stubbed Slack.
 - A manual [live smoke runbook](ContextDB/02_architecture/testing-and-local-dev.md#live-smoke-runbook-before-shipping-a-phase)
   validates one real standup against a Slack dev workspace before a phase ships.
