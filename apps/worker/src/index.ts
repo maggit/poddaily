@@ -1,12 +1,10 @@
-import { Worker, type Job } from "bullmq";
+import { Worker } from "bullmq";
 import { createDb, schema, eq } from "@poddaily/db";
 import { deriveTickCron } from "@poddaily/shared";
 import { createSlackClient } from "@poddaily/slack-client";
-import { QUEUE_NAME, createQueue, makeEnqueueSend, redisConnection, enqueueOpenRun } from "./queue";
+import { QUEUE_NAME, createQueue, redisConnection } from "./queue";
 import { diffSchedules, type ActiveStandup, type ExistingJob } from "./reconcile";
-import { openRun } from "./openRun";
-import { sendDm } from "./sendDm";
-import type { SendDmJob } from "./types";
+import { createProcessor } from "./processor";
 
 const REPEAT_NAME = "open-run"; // repeatable job name
 
@@ -62,16 +60,7 @@ async function main() {
 
   const worker = new Worker(
     QUEUE_NAME,
-    async (job: Job) => {
-      if (job.name === "open-run") {
-        const { standupId } = job.data as { standupId: string };
-        await openRun({ db, enqueueSend: makeEnqueueSend(queue) }, standupId, new Date());
-      } else if (job.name === "send-dm") {
-        await sendDm({ db, slack }, job.data as SendDmJob);
-      } else {
-        throw new Error(`[worker] unknown job name: ${job.name}`);
-      }
-    },
+    createProcessor({ db, slack, queue }),
     { connection: redisConnection() },
   );
 

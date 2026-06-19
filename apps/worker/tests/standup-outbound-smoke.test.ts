@@ -1,13 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { Queue, Worker, type Job } from "bullmq";
+import { Queue, Worker } from "bullmq";
 import { createDb } from "@poddaily/db";
 import { cronFromWeekly } from "@poddaily/shared";
 import { createSlackClient } from "@poddaily/slack-client";
 import { startSlackStub, type SlackStub } from "@poddaily/slack-stub";
-import { openRun } from "../src/openRun";
-import { sendDm } from "../src/sendDm";
-import { makeEnqueueSend, enqueueOpenRun } from "../src/queue";
-import type { SendDmJob } from "../src/types";
+import { enqueueOpenRun } from "../src/queue";
+import { createProcessor } from "../src/processor";
 
 const REDIS_URL = process.env.REDIS_URL ?? "redis://127.0.0.1:6379";
 const QUEUE_NAME = "standup-smoke"; // isolated queue name for the test
@@ -27,17 +25,8 @@ beforeAll(async () => {
   queue = new Queue(QUEUE_NAME, { connection: { url: REDIS_URL } });
   await queue.obliterate({ force: true }); // clean slate
   const slack = createSlackClient();
-  worker = new Worker(
-    QUEUE_NAME,
-    async (job: Job) => {
-      if (job.name === "open-run") {
-        await openRun({ db, enqueueSend: makeEnqueueSend(queue) }, job.data.standupId, new Date());
-      } else if (job.name === "send-dm") {
-        await sendDm({ db, slack }, job.data as SendDmJob);
-      }
-    },
-    { connection: { url: REDIS_URL } },
-  );
+  worker = new Worker(QUEUE_NAME, createProcessor({ db, slack, queue }), { connection: { url: REDIS_URL } });
+  await worker.waitUntilReady(); // ensure the subscription is live before jobs are enqueued
 });
 
 afterAll(async () => {
@@ -65,8 +54,10 @@ async function waitFor<T>(fn: () => Promise<T>, pred: (v: T) => boolean, timeout
 
 describe("smoke:standup-outbound", () => {
   it("trigger → run opens → member receives intro + Q1 via BullMQ", async () => {
-    // clean + seed
+    // clean + seed (delete runs before teams — standup_runs.standup_id is ON DELETE
+    // no action, so orphan runs from an unclean prior exit would block the cascade)
     await sql`delete from standup_reports where slack_user_id = 'U_SMOKE_OUT'`;
+    await sql`delete from standup_runs where standup_id in (select id from standups where team_id in (select id from teams where slack_channel_id = ${CHAN}))`;
     await sql`delete from team_members where slack_user_id = 'U_SMOKE_OUT'`;
     await sql`delete from teams where slack_channel_id = ${CHAN}`;
     const [team] = await sql`insert into teams (name, slack_channel_id, slack_channel_name) values ('Smoke Out Pod', ${CHAN}, 'smoke-out') returning id`;
