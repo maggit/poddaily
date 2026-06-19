@@ -56,12 +56,15 @@ just-in-time so each reflects what the prior step produced.
   - ✅ Part 1 — design system + app shell + login restyle — **DONE** (merged `2e4df1a`).
   - ✅ Part 2 — team/member CRUD via Next server-side — **DONE** (merged PR #2, `7292ec0`).
 - 🚧 [Step 4 — standup configuration](../todos/2026-06-17-phase1-step4-standup-config-plan.md) (questions + schedule + intro/outro, `smoke:config`) — in PR.
-- 🚧 Step 5 — scheduler + `send-standup-dm` + DM Q&A engine (`apps/api` + `apps/worker`, `smoke:standup`) — the core; next.
+- 🚧 Step 5 — scheduler + DM Q&A engine (the core). Split into 5a/5b.
+  - 🚧 5a — scheduler + outbound standup DM (`apps/worker`, `packages/slack-client`, `smoke:standup-outbound`) — **in progress** ([PR #11](https://github.com/maggit/poddaily/pull/11)). [Design](../../docs/superpowers/specs/2026-06-17-step5a-scheduler-outbound-dm-design.md) · [Plan](../../docs/superpowers/plans/2026-06-17-step5a-scheduler-outbound-dm.md)
+  - 5b — `apps/api` + inbound `message.im` Q&A engine + `smoke:standup`.
 - Steps 6–7 — authored before each is executed.
 
 ## Logs
 
 - [2026-06-14 planning session](../08_logs/2026-06-14-planning-session.md)
+- [2026-06-19 Step 5a build: scheduler + outbound DM](../08_logs/2026-06-19-step5a-scheduler-outbound.md)
 
 ## Scope at a glance
 
