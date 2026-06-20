@@ -48,6 +48,7 @@ export const standupRuns = pgTable("standup_runs", {
   startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   status: text("status").default("pending"),
+  channelOpeningTs: text("channel_opening_ts"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => ({ uniqRunPerDay: unique().on(t.standupId, t.scheduledDate) }));
 
