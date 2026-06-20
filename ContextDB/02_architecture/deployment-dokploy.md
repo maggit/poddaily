@@ -5,9 +5,12 @@ cloud** database. This is the chosen host — see the
 [switch-to-Dokploy ADR](../03_decisions/2026-06-17-switch-to-dokploy.md). (Railway remains a
 viable alternative — [Railway runbook](deployment-railway.md) — the Docker image is identical.)
 
-> **Status:** the **web app is deployable now** (`Dockerfile.web`, verified). `apps/api`,
-> `apps/worker`, and **Redis** arrive in build-step 5; the full stack goes live then (via the
-> compose file below). Sections marked **(Step 5)** aren't needed yet.
+> **Status:** the **full stack is deployable** as of Step 5b. `web` (`Dockerfile.web`), `api`
+> (`Dockerfile.api`), `worker` (`Dockerfile.worker`), and **Redis** are all defined in
+> `docker-compose.dokploy.yml`. Deploy the whole stack via the **Compose** path (Part B,
+> Option 2) so `api`/`worker` share a Docker network with `redis` (a standalone Application
+> can't resolve `redis://redis:6379`). Sections still marked **(Step 5)** below are historical
+> notes from when only `web` was live.
 
 ## Why Dokploy works cleanly here
 
@@ -111,7 +114,10 @@ When `apps/api` + `apps/worker` land, the full stack runs from `docker-compose.d
   for api + worker via Docker Compose's internal network.
 - Map a domain to `api` (Slack events/OAuth request URLs point at it); `worker` has no domain.
 - Share `DATABASE_URL`, `INTERNAL_API_SECRET`, `SLACK_*` across services.
-- Update the Slack app's event request URL to `https://<api-domain>/api/slack/events`.
+- Update the Slack app's Event Subscriptions **Request URL** to `https://<api-domain>/slack/events`
+  (Bolt v4's default receiver serves `/slack/events` — **no** `/api` prefix), subscribed to the
+  `message.im` bot event. The api needs `SLACK_SIGNING_SECRET` set (matching the Slack app's
+  Signing Secret) or the URL won't verify.
 
 ## Local vs deploy
 

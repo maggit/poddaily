@@ -34,6 +34,9 @@ the DM, with `skip` / `skip all` controls, completing to a `completed` report + 
 - `pnpm smoke:standup`: green — outbound run → inbound full Q&A through `handleMessage` →
   `completed` report + outro posted to the DM.
 - Both Docker images (`Dockerfile.api`, `Dockerfile.worker`) build and boot via `tsx`.
+  **Correction (see post-merge fix below):** this was first verified against a *dirty* local
+  build context whose `node_modules` masked a missing runtime dependency. A clean-clone build
+  (Dokploy) failed at boot until the Dockerfiles were fixed.
 
 ## Notable decisions / scope
 
@@ -63,6 +66,24 @@ the DM, with `skip` / `skip all` controls, completing to a `completed` report + 
 
 So Step 5b is **code-complete and CI-green**, but the live-walk + production-deploy steps of
 the per-phase Definition of Done remain (human operator steps).
+
+## Post-merge deploy fixes (2026-06-20)
+
+Found while standing the stack up on Dokploy, after the branch merged to `main`.
+
+- **`ERR_MODULE_NOT_FOUND: drizzle-orm` at api boot on Dokploy** (fix: `15d74cc`). The runner
+  stages of `Dockerfile.api` / `Dockerfile.worker` copied `packages/*` **source** from the
+  build context but only `apps/<svc>/node_modules` from the deps stage — so each workspace
+  package's own deps (`drizzle-orm`, `postgres`, `luxon`, `@slack/web-api`) were absent in the
+  image. Local builds passed only because the dev tree's `node_modules` got swept in by `COPY`;
+  a clean Dokploy/CI clone has none. Fix: copy `packages/<p>/node_modules` from the deps stage,
+  and add a **`.dockerignore`** (excluding `node_modules`) so local builds match a clean clone
+  and can't mask this again. Both images re-verified building + booting in a clean context.
+  Lesson: the Task-6 review built in a dirty context — Docker builds must be validated with
+  `node_modules` excluded from the context.
+- **Slack event Request URL is `/slack/events`, not `/api/slack/events`.** Bolt v4's default
+  HTTP receiver serves `/slack/events`; the deployment doc had the wrong path (now corrected in
+  [deployment-dokploy.md](../02_architecture/deployment-dokploy.md)).
 
 ## Out of scope (not done in 5b)
 
