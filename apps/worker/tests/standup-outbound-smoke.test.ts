@@ -73,10 +73,12 @@ describe("smoke:standup-outbound", () => {
 
     const log = await waitFor(
       async () => (await (await fetch(`${stub.url}/__stub/messages`)).json()) as Array<{ channel: string; text: string }>,
-      (l) => l.length >= 2,
+      (l) => l.filter((m) => m.channel !== CHAN).length >= 2,
     );
-    expect(log[0].text).toBe("Morning!");
-    expect(log[1].text).toBe("What did you do?");
+    const dm = log.filter((m) => m.channel !== CHAN);
+    expect(dm[0].text).toBe("Morning!");
+    expect(dm[1].text).toBe("What did you do?");
+    expect(log.some((m) => m.channel === CHAN && m.text.includes("Reported: 0 out of"))).toBe(true);
 
     const reports = await sql`select * from standup_reports where slack_user_id = 'U_SMOKE_OUT' and status = 'in_progress'`;
     expect(reports).toHaveLength(1);
