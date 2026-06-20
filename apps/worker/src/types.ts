@@ -17,6 +17,7 @@ export type EnqueueSend = (job: SendDmJob, opts: { delayMs: number }) => Promise
 export interface OpenRunDeps {
   db: Db;
   enqueueSend: EnqueueSend;
+  slack: SlackClient;
 }
 
 export interface SendDmDeps {

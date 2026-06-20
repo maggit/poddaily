@@ -22,7 +22,7 @@ export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<void
   return async (job: Job): Promise<void> => {
     if (job.name === "open-run") {
       const { standupId } = job.data as { standupId: string };
-      await openRun({ db, enqueueSend }, standupId, new Date());
+      await openRun({ db, enqueueSend, slack }, standupId, new Date());
     } else if (job.name === "send-dm") {
       await sendDm({ db, slack }, job.data as SendDmJob);
     } else {

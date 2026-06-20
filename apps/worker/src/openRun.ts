@@ -1,5 +1,5 @@
 import { schema, eq, and } from "@poddaily/db";
-import { anchorDate, isActiveWeekday, computeSendInstant } from "@poddaily/shared";
+import { anchorDate, isActiveWeekday, computeSendInstant, buildOpeningMessage } from "@poddaily/shared";
 import type { OpenRunDeps } from "./types";
 
 export interface OpenRunResult {
@@ -13,7 +13,7 @@ export interface OpenRunResult {
  * second call for the same day inserts no run and fans out nothing.
  */
 export async function openRun(deps: OpenRunDeps, standupId: string, now: Date): Promise<OpenRunResult> {
-  const { db, enqueueSend } = deps;
+  const { db, enqueueSend, slack } = deps;
 
   const [standup] = await db.select().from(schema.standups).where(eq(schema.standups.id, standupId));
   if (!standup || !standup.isActive) return { runId: null, enqueued: 0 };
@@ -37,6 +37,31 @@ export async function openRun(deps: OpenRunDeps, standupId: string, now: Date): 
     .select()
     .from(schema.teamMembers)
     .where(and(eq(schema.teamMembers.teamId, standup.teamId), eq(schema.teamMembers.canReport, true)));
+
+  // Post the channel opening message once per run (best-effort) and store its ts for
+  // threading. teamId is non-null here (guarded above). Per-report replies are threaded
+  // under this ts by the api on completion.
+  try {
+    const [team] = await db
+      .select({ channelId: schema.teams.slackChannelId })
+      .from(schema.teams)
+      .where(eq(schema.teams.id, standup.teamId));
+    if (team?.channelId) {
+      const opening = buildOpeningMessage({
+        standupName: standup.name,
+        date,
+        reported: 0,
+        total: members.length,
+      });
+      const openingTs = await slack.postMessage(team.channelId, opening.text, { blocks: opening.blocks });
+      await db
+        .update(schema.standupRuns)
+        .set({ channelOpeningTs: openingTs })
+        .where(eq(schema.standupRuns.id, runId));
+    }
+  } catch (err) {
+    console.warn(`[broadcast] opening message failed for run ${runId}:`, (err as Error).message);
+  }
 
   // At-least-once fan-out: the run row is committed before this loop, so if an
   // enqueue throws partway (e.g. Redis down) the run is left in "running" and the
