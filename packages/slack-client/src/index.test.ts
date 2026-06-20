@@ -32,4 +32,22 @@ describe("slack-client", () => {
     const log = await (await fetch(`${stub.url}/__stub/messages`)).json();
     expect(log).toEqual([{ channel: "D2", text: "trailing api test" }]);
   });
+
+  it("postMessage forwards thread_ts / username / blocks", async () => {
+    const client = createSlackClient({ baseUrl: stub.url, token: "xoxb-test" });
+    await fetch(`${stub.url}/__stub/reset`, { method: "POST" });
+    await client.postMessage("C_CHAN", "fallback", {
+      threadTs: "100.5", username: "Raquel", iconUrl: "https://x/a.png", blocks: [{ type: "divider" }],
+    });
+    const [msg] = (await (await fetch(`${stub.url}/__stub/messages`)).json()) as Array<Record<string, string>>;
+    expect(msg).toMatchObject({ channel: "C_CHAN", thread_ts: "100.5", username: "Raquel", icon_url: "https://x/a.png" });
+  });
+
+  it("updateMessage calls chat.update", async () => {
+    const client = createSlackClient({ baseUrl: stub.url, token: "xoxb-test" });
+    await fetch(`${stub.url}/__stub/reset`, { method: "POST" });
+    await client.updateMessage("C_CHAN", "200.7", { text: "Reported: 2 out of 3" });
+    const [upd] = (await (await fetch(`${stub.url}/__stub/updates`)).json()) as Array<Record<string, string>>;
+    expect(upd).toMatchObject({ channel: "C_CHAN", ts: "200.7", text: "Reported: 2 out of 3" });
+  });
 });
