@@ -5,6 +5,8 @@ import { handleMessage } from "./handleMessage";
 
 const { db } = createDb();
 const slack = createSlackClient();
+const secret = process.env.INTERNAL_API_SECRET ?? "";
+const makeUserSlack = (token: string) => createSlackClient({ token });
 
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
@@ -16,7 +18,7 @@ const app = new App({
 app.message(async ({ message }) => {
   const m = message as { subtype?: string; channel_type?: string; user?: string; channel: string; text?: string };
   if (m.subtype !== undefined || m.channel_type !== "im" || !m.user || !m.text) return;
-  await handleMessage({ db, slack }, { slackUserId: m.user, channel: m.channel, text: m.text });
+  await handleMessage({ db, slack, secret, makeUserSlack }, { slackUserId: m.user, channel: m.channel, text: m.text });
 });
 
 const port = Number(process.env.PORT ?? 3001);

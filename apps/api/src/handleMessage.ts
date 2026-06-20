@@ -1,4 +1,4 @@
-import { schema, eq, and, desc } from "@poddaily/db";
+import { schema, eq, and, desc, getUserToken } from "@poddaily/db";
 import { advanceReport, buildOpeningMessage, buildReportBlocks } from "@poddaily/shared";
 import type { ReportAnswer } from "@poddaily/shared";
 import type { SlackClient } from "@poddaily/slack-client";
@@ -9,6 +9,8 @@ type Db = ReturnType<typeof createDb>["db"];
 export interface HandleMessageDeps {
   db: Db;
   slack: SlackClient;
+  secret: string;
+  makeUserSlack: (token: string) => SlackClient;
 }
 
 /** One inbound DM reply from a member. */
@@ -76,16 +78,19 @@ export async function handleMessage(deps: HandleMessageDeps, msg: IncomingDm): P
         .set({ answers: action.answers, status: "completed", reportedAt: new Date() })
         .where(eq(schema.standupReports.id, report.id));
       await slack.postMessage(msg.channel, standup.outroMessage ?? DEFAULT_OUTRO);
-      await broadcastReport({ db, slack }, { report, run, standup, answers: action.answers });
+      await broadcastReport(deps, { report, run, standup, answers: action.answers });
       return;
   }
 }
 
 /**
  * Best-effort channel broadcast: post the completed report as a threaded reply under the
- * run's opening message (attributed to the member via chat:write.customize), persist the
- * post ts, and refresh the "Reported: n out of total" counter. Any failure is logged and
- * swallowed so a broadcast problem never reverts the completed report.
+ * run's opening message, persist the post ts, and refresh the "Reported: n out of total"
+ * counter. When the member has a stored user token we post AS THE USER (true authorship,
+ * no username/icon override → Slack counts it as the member, no "APP" badge). Otherwise
+ * (or on a user-token post failure) we degrade: the bot posts with the member's name/avatar
+ * via chat:write.customize plus a Connect nudge. Any failure is logged and swallowed so a
+ * broadcast problem never reverts the completed report.
  */
 async function broadcastReport(
   deps: HandleMessageDeps,
@@ -96,7 +101,7 @@ async function broadcastReport(
     answers: ReportAnswer[];
   },
 ): Promise<void> {
-  const { db, slack } = deps;
+  const { db, slack, secret, makeUserSlack } = deps;
   const { report, run, standup, answers } = ctx;
   try {
     if (!run.channelOpeningTs) {
@@ -111,25 +116,50 @@ async function broadcastReport(
       .where(eq(schema.teams.id, standup.teamId));
     if (!team?.channelId) return;
 
-    const [member] = await db
-      .select({ avatar: schema.teamMembers.slackAvatarUrl })
-      .from(schema.teamMembers)
-      .where(and(
-        eq(schema.teamMembers.teamId, standup.teamId),
-        eq(schema.teamMembers.slackUserId, report.slackUserId),
-      ));
-
     const built = buildReportBlocks({
       standupName: standup.name,
       displayName: report.slackDisplayName,
       answers,
     });
-    const postTs = await slack.postMessage(team.channelId, built.text, {
-      threadTs: run.channelOpeningTs,
-      username: report.slackDisplayName,
-      iconUrl: member?.avatar ?? undefined,
-      blocks: built.blocks,
-    });
+    const token = await getUserToken(db, secret, report.slackUserId);
+
+    let postTs: string | null = null;
+    if (token) {
+      // Post AS THE USER — true authorship, no username/icon override. Slack counts it
+      // as the user's message (no "APP" badge).
+      try {
+        postTs = await makeUserSlack(token).postMessage(team.channelId, built.text, {
+          threadTs: run.channelOpeningTs,
+          blocks: built.blocks,
+        });
+      } catch (err) {
+        console.warn(`[broadcast] user-token post failed for ${report.slackUserId}; degrading:`, (err as Error).message);
+      }
+    }
+    if (!postTs) {
+      // Degraded: bot posts with the member's name/avatar + a Connect nudge.
+      const [member] = await db
+        .select({ avatar: schema.teamMembers.slackAvatarUrl })
+        .from(schema.teamMembers)
+        .where(and(
+          eq(schema.teamMembers.teamId, standup.teamId),
+          eq(schema.teamMembers.slackUserId, report.slackUserId),
+        ));
+      const webUrl = process.env.NEXTAUTH_URL;
+      const blocks = webUrl
+        ? [...(built.blocks as unknown[]), {
+            type: "context",
+            elements: [{ type: "mrkdwn", text: `_${report.slackDisplayName} hasn't connected — <${webUrl}/api/slack/install|Connect to post as yourself>_` }],
+          }]
+        : built.blocks;
+      postTs = await slack.postMessage(team.channelId, built.text, {
+        threadTs: run.channelOpeningTs,
+        username: report.slackDisplayName,
+        iconUrl: member?.avatar ?? undefined,
+        blocks,
+      });
+    }
+
     await db.update(schema.standupReports)
       .set({ channelPostTs: postTs })
       .where(eq(schema.standupReports.id, report.id));
