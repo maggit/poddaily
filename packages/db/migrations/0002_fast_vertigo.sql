@@ -1,0 +1,1 @@
+ALTER TABLE "standup_runs" ADD COLUMN "channel_opening_ts" text;

@@ -72,4 +72,24 @@ describe("slack web api stub", () => {
     const log = await (await fetch(`${stub.url}/__stub/messages`)).json();
     expect(log).toHaveLength(0);
   });
+
+  it("records thread_ts/username/blocks on postMessage and chat.update", async () => {
+    await postForm(`${stub.url}/__stub/reset`, {});
+    await postForm(`${stub.url}/api/chat.postMessage`, {
+      channel: "C1",
+      text: "hi",
+      thread_ts: "111.0",
+      username: "Raquel",
+      blocks: "[{}]",
+    });
+    await postForm(`${stub.url}/api/chat.update`, {
+      channel: "C1",
+      ts: "999.0",
+      text: "Reported: 1 out of 1",
+    });
+    const msgs = (await (await fetch(`${stub.url}/__stub/messages`)).json()) as Array<Record<string, string>>;
+    expect(msgs[0]).toMatchObject({ channel: "C1", text: "hi", thread_ts: "111.0", username: "Raquel" });
+    const updates = (await (await fetch(`${stub.url}/__stub/updates`)).json()) as Array<Record<string, string>>;
+    expect(updates[0]).toMatchObject({ channel: "C1", ts: "999.0", text: "Reported: 1 out of 1" });
+  });
 });

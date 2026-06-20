@@ -6,6 +6,16 @@ import type { SendDmJob } from "./types";
 
 const { db, sql } = createDb();
 
+function fakeSlack() {
+  const posts: Array<{ channel: string; text: string }> = [];
+  return {
+    posts,
+    openDm: async () => "D_FAKE",
+    postMessage: async (channel: string, text: string) => { posts.push({ channel, text }); return "ts_open"; },
+    updateMessage: async () => {},
+  };
+}
+
 const CHAN = "C_OPENRUN";
 // "09:00 Mon-Fri"
 const CRON = cronFromWeekly({ weekdays: [1, 2, 3, 4, 5], hour: 9, minute: 0 });
@@ -41,8 +51,9 @@ describe("openRun", () => {
     const standupId = await seedStandup();
     const enqueued: Array<{ job: SendDmJob; delayMs: number }> = [];
     const now = new Date("2026-06-17T00:05:00Z"); // Wednesday, before any member 09:00
+    const slack = fakeSlack();
 
-    const result = await openRun({ db, enqueueSend: async (job, opts) => { enqueued.push({ job, delayMs: opts.delayMs }); } }, standupId, now);
+    const result = await openRun({ db, enqueueSend: async (job, opts) => { enqueued.push({ job, delayMs: opts.delayMs }); }, slack }, standupId, now);
 
     expect(result.runId).toBeTruthy();
     expect(result.enqueued).toBe(2); // U_NOREPORT excluded
@@ -55,15 +66,20 @@ describe("openRun", () => {
     const runs = await sql`select * from standup_runs where id = ${result.runId}`;
     expect(runs).toHaveLength(1);
     expect(runs[0].status).toBe("running");
+    // the channel opening message was posted with the live counter and its ts stored
+    expect(slack.posts.some((p) => p.channel === CHAN && p.text.includes("Reported: 0 out of"))).toBe(true);
+    const [openedRun] = await sql`select channel_opening_ts from standup_runs where id = ${result.runId}`;
+    expect(openedRun.channel_opening_ts).toBe("ts_open");
   });
 
   it("is idempotent — a second openRun for the same day enqueues nothing new", async () => {
     const standupId = await seedStandup();
     const now = new Date("2026-06-17T00:05:00Z");
+    const slack = fakeSlack();
     const first: SendDmJob[] = [];
-    await openRun({ db, enqueueSend: async (j) => { first.push(j); } }, standupId, now);
+    await openRun({ db, enqueueSend: async (j) => { first.push(j); }, slack }, standupId, now);
     const second: SendDmJob[] = [];
-    const r2 = await openRun({ db, enqueueSend: async (j) => { second.push(j); } }, standupId, now);
+    const r2 = await openRun({ db, enqueueSend: async (j) => { second.push(j); }, slack }, standupId, now);
     expect(second).toHaveLength(0);
     expect(r2.runId).toBeNull();
     expect(r2.enqueued).toBe(0);
@@ -75,7 +91,8 @@ describe("openRun", () => {
     const standupId = await seedStandup();
     const sat = new Date("2026-06-20T00:05:00Z"); // Saturday
     const enq: SendDmJob[] = [];
-    const r = await openRun({ db, enqueueSend: async (j) => { enq.push(j); } }, standupId, sat);
+    const slack = fakeSlack();
+    const r = await openRun({ db, enqueueSend: async (j) => { enq.push(j); }, slack }, standupId, sat);
     expect(r.runId).toBeNull();
     expect(enq).toHaveLength(0);
   });
@@ -84,7 +101,8 @@ describe("openRun", () => {
     const standupId = await seedStandup(false);
     const now = new Date("2026-06-17T00:05:00Z");
     const enq: SendDmJob[] = [];
-    const r = await openRun({ db, enqueueSend: async (j) => { enq.push(j); } }, standupId, now);
+    const slack = fakeSlack();
+    const r = await openRun({ db, enqueueSend: async (j) => { enq.push(j); }, slack }, standupId, now);
     expect(r.runId).toBeNull();
     expect(enq).toHaveLength(0);
   });

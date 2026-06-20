@@ -121,6 +121,14 @@ advances through the questions one at a time. `skip` records "(skipped)" and mov
 pnpm smoke:standup            # outbound DM → full Q&A → completed report + outro
 ```
 
+### Step 6a — channel broadcast
+
+After a member completes their DM, their report appears threaded under the daily opening
+message in the team channel — the bot posts each report with the member's name/avatar
+(`chat:write.customize`) and updates the `Reported: n out of total` counter. The bot must be a
+member of that channel (`/invite @poddaily`) or the post is logged as degraded. `pnpm
+smoke:standup` covers the broadcast (opening message + threaded reply + counter).
+
 ---
 
 ## Track B — Live end-to-end (real Supabase + real Slack)

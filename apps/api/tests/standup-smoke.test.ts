@@ -101,5 +101,27 @@ describe("smoke:standup", () => {
     const texts = msgs.map((m) => m.text);
     expect(texts).toContain("What will you do?");
     expect(texts).toContain("See you tomorrow!");
+
+    // --- broadcast assertions (6a) ---
+    const allMsgs = (await (await fetch(`${stub.url}/__stub/messages`)).json()) as Array<{
+      channel: string; text: string; thread_ts?: string; username?: string;
+    }>;
+    const channelMsgs = allMsgs.filter((m) => m.channel === CHAN);
+
+    // opening message posted to the team channel by the worker
+    expect(channelMsgs.some((m) => m.text.includes("Reported: 0 out of 1"))).toBe(true);
+
+    // threaded report reply, attributed to the member
+    const reply = channelMsgs.find((m) => m.thread_ts && m.username === "Standup Tester");
+    expect(reply).toBeTruthy();
+    expect(reply!.text).toContain("Build the inbound engine");
+
+    // channel_post_ts persisted on the report
+    const [reportRow] = await sql`select channel_post_ts from standup_reports where slack_user_id = ${USER}`;
+    expect(reportRow.channel_post_ts).not.toBeNull();
+
+    // opening counter updated to 1 of 1
+    const updates = (await (await fetch(`${stub.url}/__stub/updates`)).json()) as Array<{ text: string }>;
+    expect(updates.some((u) => u.text.includes("Reported: 1 out of 1"))).toBe(true);
   });
 });

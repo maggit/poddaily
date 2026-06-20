@@ -9,6 +9,16 @@ export interface SlackStub {
 export interface RecordedMessage {
   channel: string;
   text: string;
+  thread_ts?: string;
+  username?: string;
+  icon_url?: string;
+  blocks?: string; // raw JSON string as Slack receives it (form-encoded)
+}
+
+export interface RecordedUpdate {
+  channel: string;
+  ts: string;
+  text: string;
 }
 
 const STUB_USER = {
@@ -37,6 +47,7 @@ function dmChannelId(users: string): string {
 
 export function startSlackStub(port = 4010): Promise<SlackStub> {
   const messages: RecordedMessage[] = [];
+  const updates: RecordedUpdate[] = [];
   let tsCounter = 1000;
 
   const server: Server = createServer(async (req, res) => {
@@ -69,16 +80,36 @@ export function startSlackStub(port = 4010): Promise<SlackStub> {
     }
     if (u.pathname === "/api/chat.postMessage") {
       const body = await readBody(req);
-      messages.push({ channel: body.get("channel") ?? "", text: body.get("text") ?? "" });
+      messages.push({
+        channel: body.get("channel") ?? "",
+        text: body.get("text") ?? "",
+        thread_ts: body.get("thread_ts") ?? undefined,
+        username: body.get("username") ?? undefined,
+        icon_url: body.get("icon_url") ?? undefined,
+        blocks: body.get("blocks") ?? undefined,
+      });
       return json(200, { ok: true, ts: String(tsCounter++) });
+    }
+    if (u.pathname === "/api/chat.update") {
+      const body = await readBody(req);
+      updates.push({
+        channel: body.get("channel") ?? "",
+        ts: body.get("ts") ?? "",
+        text: body.get("text") ?? "",
+      });
+      return json(200, { ok: true, ts: body.get("ts") ?? "" });
     }
 
     // --- Test introspection ---
+    if (u.pathname === "/__stub/updates") {
+      return json(200, updates);
+    }
     if (u.pathname === "/__stub/messages") {
       return json(200, messages);
     }
     if (u.pathname === "/__stub/reset") {
       messages.length = 0;
+      updates.length = 0;
       return json(200, { ok: true });
     }
 
