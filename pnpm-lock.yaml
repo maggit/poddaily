@@ -101,6 +101,9 @@ importers:
       '@eslint/eslintrc':
         specifier: ^3
         version: 3.3.5
+      '@poddaily/slack-stub':
+        specifier: workspace:*
+        version: link:../../tools/slack-stub
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.3.1
