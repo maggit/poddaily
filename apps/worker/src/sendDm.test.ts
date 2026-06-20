@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach, afterAll, beforeAll } from "vitest";
-import { createDb } from "@poddaily/db";
+import { createDb, saveUserToken } from "@poddaily/db";
 import { cronFromWeekly } from "@poddaily/shared";
 import { createSlackClient } from "@poddaily/slack-client";
 import { startSlackStub, type SlackStub } from "@poddaily/slack-stub";
 import { sendDm } from "./sendDm";
+
+const TOKEN_SECRET = process.env.INTERNAL_API_SECRET ?? "test-secret-aaaaaaaaaaaaaaaaaaaa";
 
 const { db, sql } = createDb();
 const CHAN = "C_SENDDM";
@@ -11,7 +13,11 @@ const CRON = cronFromWeekly({ weekdays: [1, 2, 3, 4, 5], hour: 9, minute: 0 });
 
 let stub: SlackStub;
 beforeAll(async () => { stub = await startSlackStub(0); });
-afterAll(async () => { await stub.close(); await sql.end(); });
+afterAll(async () => {
+  await sql`delete from slack_user_tokens where slack_user_id = 'U_SEND'`;
+  await stub.close();
+  await sql.end();
+});
 
 async function seedRun(intro: string | null) {
   const [team] = await sql`insert into teams (name, slack_channel_id, slack_channel_name) values ('SendDm Pod', ${CHAN}, 'senddm-pod') returning id`;
@@ -26,6 +32,11 @@ async function seedRun(intro: string | null) {
 }
 
 beforeEach(async () => {
+  // Default to unconnected + no web URL so existing message-count assertions hold
+  // (the Connect nudge is skipped when NEXTAUTH_URL is unset). Tests that exercise
+  // the nudge opt in by setting NEXTAUTH_URL explicitly.
+  delete process.env.NEXTAUTH_URL;
+  await sql`delete from slack_user_tokens where slack_user_id = 'U_SEND'`;
   await fetch(`${stub.url}/__stub/reset`, { method: "POST" });
   await sql`delete from standup_reports where slack_user_id = 'U_SEND'`;
   await sql`delete from standup_runs where standup_id in (select id from standups where team_id in (select id from teams where slack_channel_id = ${CHAN}))`;
@@ -74,5 +85,30 @@ describe("sendDm", () => {
     expect(reports[0].n).toBe(1);
     const log = await (await fetch(`${stub.url}/__stub/messages`)).json();
     expect(log).toHaveLength(0); // second call short-circuited before posting
+  });
+
+  it("posts a Connect button to a member with no user token", async () => {
+    process.env.NEXTAUTH_URL = "https://web.example";
+    const { standupId, runId } = await seedRun(null);
+    const slack = createSlackClient({ token: "xoxb-test", baseUrl: stub.url });
+
+    await sendDm({ db, slack }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
+
+    const log: Array<{ blocks?: string }> = await (await fetch(`${stub.url}/__stub/messages`)).json();
+    const connect = log.find((p) => (p.blocks ?? "").includes("/api/slack/install"));
+    expect(connect).toBeTruthy();
+  });
+
+  it("does NOT post a Connect button to a connected member", async () => {
+    process.env.NEXTAUTH_URL = "https://web.example";
+    await saveUserToken(db, TOKEN_SECRET, { slackUserId: "U_SEND", accessToken: "xoxp-x", scopes: "chat:write" });
+    const { standupId, runId } = await seedRun(null);
+    const slack = createSlackClient({ token: "xoxb-test", baseUrl: stub.url });
+
+    await sendDm({ db, slack }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
+
+    const log: Array<{ blocks?: string }> = await (await fetch(`${stub.url}/__stub/messages`)).json();
+    const connect = log.find((p) => (p.blocks ?? "").includes("/api/slack/install"));
+    expect(connect).toBeFalsy();
   });
 });
