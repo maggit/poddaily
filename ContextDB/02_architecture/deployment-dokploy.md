@@ -119,6 +119,31 @@ When `apps/api` + `apps/worker` land, the full stack runs from `docker-compose.d
   `message.im` bot event. The api needs `SLACK_SIGNING_SECRET` set (matching the Slack app's
   Signing Secret) or the URL won't verify.
 
+## Production gotchas (learned walking the Step 5b live deploy)
+
+- **Leave `SLACK_API_BASE_URL` UNSET in production.** It only exists to point the Slack client
+  at the local test stub (`http://127.0.0.1:4010`). If it leaks into the api/worker env (e.g.
+  copied from a local `.env`), every Slack call fails with `ECONNREFUSED 127.0.0.1:4010` and no
+  DM is sent. Unset → the client defaults to `https://slack.com/api/`.
+- **Enable the DM reply box in the Slack app.** Slack disables replies to a bot by default
+  ("Sending messages to this app has been turned off"). In the Slack app → **App Home → Show
+  Tabs** → enable the **Messages Tab** and check **"Allow users to send Slash commands and
+  messages from the messages tab."** Without this the outbound DM arrives but the user can't
+  answer.
+- **Bot scopes for the DM Q&A:** `chat:write` + `im:write` (post / open DM) and **`im:history`**
+  (receive replies). Adding a scope requires reinstalling the app → new `SLACK_BOT_TOKEN`.
+- **Standalone Application can't reach `redis://redis:6379`.** That hostname only resolves
+  inside the Compose stack's network. Deploy via the **Compose** path (Part B Option 2) so
+  api/worker share a network with `redis`; a per-service Application needs the Redis service's
+  real internal host + a shared network.
+- **`trigger` takes the standup id, not the team id.** The `/teams/<teamId>/standup` URL shows
+  the *team* id; `openRun` looks up `standups.id`, so triggering with a team id is a silent
+  no-op (the `open-run` job logs "done" but opens no run). Get the id from `select id from
+  standups`.
+- **A manual `trigger` still respects the configured send time + active weekdays.** It's not a
+  "send now" button: each member's DM fires at their local configured time, and `openRun` skips
+  non-active weekdays. It only sends immediately if the configured time has already passed today.
+
 ## Local vs deploy
 
 The repo's `docker-compose.yml` stays for **local Redis only**; `docker-compose.dokploy.yml`

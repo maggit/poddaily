@@ -60,12 +60,17 @@ the DM, with `skip` / `skip all` controls, completing to a `completed` report + 
   inbound api section, testing line, deployment services) — ✓
 - Affected `ContextDB/` docs updated (getting-started 5b note, slack-integration status, this
   log) — ✓
-- **Live smoke runbook against a real Slack dev workspace — NOT yet done.** Requires the human
-  operator to walk it.
-- **Actual Dokploy production deploy — NOT yet done.** Requires the human operator.
+- **Live smoke runbook against a real Slack dev workspace — walked 2026-06-20.** ✓ Deployed the
+  full stack to Dokploy + Supabase + Cloudflare (`api.poddaily.io`), triggered a run, received
+  the intro + Q1 DM, answered all 4 questions one-at-a-time, and the report completed with the
+  outro (`standup_reports.status = completed`, `answers` length 4). Gotchas hit and fixed along
+  the way are captured in [deployment-dokploy.md](../02_architecture/deployment-dokploy.md#production-gotchas-learned-walking-the-step-5b-live-deploy)
+  (leftover `SLACK_API_BASE_URL`, the Slack Messages-tab reply toggle, the Dockerfile
+  node_modules fix above, team-id-vs-standup-id, standalone-vs-Compose Redis networking).
+- **Dokploy production deploy — done 2026-06-20.** ✓ web + api + worker + redis live.
 
-So Step 5b is **code-complete and CI-green**, but the live-walk + production-deploy steps of
-the per-phase Definition of Done remain (human operator steps).
+So Step 5b is **fully shipped**: CI-green *and* verified end-to-end against a real Slack
+workspace in production. The per-phase Definition of Done is complete.
 
 ## Post-merge deploy fixes (2026-06-20)
 
@@ -89,6 +94,5 @@ Found while standing the stack up on Dokploy, after the branch merged to `main`.
 
 - Channel broadcast / post-as-user → Step 6.
 - 4h timeout sweeper → Step 7.
-- Live Slack-workspace smoke walk + Dokploy production deploy → human operator, not yet done.
 
 Next: Step 6 — channel broadcast (post-as-user), threaded under the daily opening message.
