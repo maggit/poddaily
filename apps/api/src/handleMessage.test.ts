@@ -14,6 +14,7 @@ function fakeSlack() {
     posts,
     async openDm() { return DM; },
     async postMessage(channel: string, text: string) { posts.push({ channel, text }); return "ts1"; },
+    async updateMessage() {},
   };
 }
 
@@ -75,6 +76,44 @@ describe("handleMessage", () => {
     expect(r.status).toBe("timed_out");
     expect(r.answers).toHaveLength(0);
     expect(slack.posts.at(-1)?.text).toBe("No problem — skipping today's standup. 👋");
+  });
+
+  it("broadcasts the completed report as a threaded reply and updates the counter", async () => {
+    await sql`update standup_runs set channel_opening_ts = 'open_ts_1' where id = ${runId}`;
+
+    const posts: Array<{ channel: string; text: string; opts: any }> = [];
+    const updates: Array<{ channel: string; ts: string; text: string }> = [];
+    const slack = {
+      openDm: async () => "D",
+      postMessage: async (channel: string, text: string, opts: any = {}) => { posts.push({ channel, text, opts }); return "post_ts_1"; },
+      updateMessage: async (channel: string, ts: string, o: any) => { updates.push({ channel, ts, text: o.text }); },
+    };
+
+    await handleMessage({ db, slack }, { slackUserId: USER, channel: DM, text: "answer 1" });
+    await handleMessage({ db, slack }, { slackUserId: USER, channel: DM, text: "answer 2" });
+
+    const reply = posts.find((p) => p.opts?.threadTs === "open_ts_1");
+    expect(reply).toBeTruthy();
+    expect(reply!.opts.username).toBe("HM Tester");
+    expect(reply!.channel).toBe(CHAN);
+
+    const [r] = await sql`select channel_post_ts from standup_reports where slack_user_id = ${USER}`;
+    expect(r.channel_post_ts).toBe("post_ts_1");
+
+    const upd = updates.find((u) => u.ts === "open_ts_1");
+    expect(upd?.text).toContain("Reported: 1 out of 1");
+
+    await sql`update standup_runs set channel_opening_ts = null where id = ${runId}`;
+  });
+
+  it("does not throw and leaves the report completed when broadcast has no opening ts", async () => {
+    await sql`update standup_runs set channel_opening_ts = null where id = ${runId}`;
+    const slack = fakeSlack();
+    await handleMessage({ db, slack }, { slackUserId: USER, channel: DM, text: "a1" });
+    await handleMessage({ db, slack }, { slackUserId: USER, channel: DM, text: "a2" });
+    const [r] = await sql`select status, channel_post_ts from standup_reports where slack_user_id = ${USER}`;
+    expect(r.status).toBe("completed");
+    expect(r.channel_post_ts).toBeNull();
   });
 
   it("ignores a DM when the user has no open report", async () => {

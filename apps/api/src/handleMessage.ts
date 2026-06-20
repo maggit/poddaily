@@ -1,5 +1,6 @@
 import { schema, eq, and, desc } from "@poddaily/db";
-import { advanceReport } from "@poddaily/shared";
+import { advanceReport, buildOpeningMessage, buildReportBlocks } from "@poddaily/shared";
+import type { ReportAnswer } from "@poddaily/shared";
 import type { SlackClient } from "@poddaily/slack-client";
 import type { createDb } from "@poddaily/db";
 
@@ -75,6 +76,78 @@ export async function handleMessage(deps: HandleMessageDeps, msg: IncomingDm): P
         .set({ answers: action.answers, status: "completed", reportedAt: new Date() })
         .where(eq(schema.standupReports.id, report.id));
       await slack.postMessage(msg.channel, standup.outroMessage ?? DEFAULT_OUTRO);
-      return; // broadcast → Step 6
+      await broadcastReport({ db, slack }, { report, run, standup, answers: action.answers });
+      return;
+  }
+}
+
+/**
+ * Best-effort channel broadcast: post the completed report as a threaded reply under the
+ * run's opening message (attributed to the member via chat:write.customize), persist the
+ * post ts, and refresh the "Reported: n out of total" counter. Any failure is logged and
+ * swallowed so a broadcast problem never reverts the completed report.
+ */
+async function broadcastReport(
+  deps: HandleMessageDeps,
+  ctx: {
+    report: typeof schema.standupReports.$inferSelect;
+    run: typeof schema.standupRuns.$inferSelect;
+    standup: typeof schema.standups.$inferSelect;
+    answers: ReportAnswer[];
+  },
+): Promise<void> {
+  const { db, slack } = deps;
+  const { report, run, standup, answers } = ctx;
+  try {
+    if (!run.channelOpeningTs) {
+      console.warn(`[broadcast] run ${run.id} has no opening ts; skipping report ${report.id}`);
+      return;
+    }
+    if (!standup.teamId) return;
+
+    const [team] = await db
+      .select({ channelId: schema.teams.slackChannelId })
+      .from(schema.teams)
+      .where(eq(schema.teams.id, standup.teamId));
+    if (!team?.channelId) return;
+
+    const [member] = await db
+      .select({ avatar: schema.teamMembers.slackAvatarUrl })
+      .from(schema.teamMembers)
+      .where(and(
+        eq(schema.teamMembers.teamId, standup.teamId),
+        eq(schema.teamMembers.slackUserId, report.slackUserId),
+      ));
+
+    const built = buildReportBlocks({
+      standupName: standup.name,
+      displayName: report.slackDisplayName,
+      answers,
+    });
+    const postTs = await slack.postMessage(team.channelId, built.text, {
+      threadTs: run.channelOpeningTs,
+      username: report.slackDisplayName,
+      iconUrl: member?.avatar ?? undefined,
+      blocks: built.blocks,
+    });
+    await db.update(schema.standupReports)
+      .set({ channelPostTs: postTs })
+      .where(eq(schema.standupReports.id, report.id));
+
+    const all = await db
+      .select({ status: schema.standupReports.status })
+      .from(schema.standupReports)
+      .where(eq(schema.standupReports.runId, run.id));
+    const total = all.length;
+    const reported = all.filter((r) => r.status === "completed").length;
+    const opening = buildOpeningMessage({
+      standupName: standup.name,
+      date: run.scheduledDate,
+      reported,
+      total,
+    });
+    await slack.updateMessage(team.channelId, run.channelOpeningTs, { text: opening.text, blocks: opening.blocks });
+  } catch (err) {
+    console.warn(`[broadcast] degraded for report ${report.id}:`, (err as Error).message);
   }
 }
