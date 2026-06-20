@@ -40,6 +40,12 @@ runs `@slack/bolt`.
 
 ## DM Q&A engine
 
+> **Status — implemented in Step 5b.** The engine ships as `apps/api` (a Bolt service
+> receiving `message.im`) delegating to `handleMessage`, which drives the pure `advanceReport`
+> reducer in `packages/shared`. `skip` / `skip all` are shipped; on completion the outro is
+> posted to the DM. Still pending: the 4h timeout sweep (Step 7) and the channel broadcast
+> (Step 6) — in 5b a completed report posts the outro to the DM only.
+
 State is **reconstructed from Postgres** on every event — no separate state store. See
 [stateless DM ADR](../03_decisions/2026-06-14-stateless-dm-state.md) and the
 [DM state machine diagram](../07_diagrams/dm-state-machine.mmd.md).

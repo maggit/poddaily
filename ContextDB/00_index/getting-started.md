@@ -111,6 +111,16 @@ the stub received the expected Slack API calls and the DB has an `in_progress` r
 > The `smoke:standup-outbound` suite runs as part of the default `vitest` run. This is a
 > conscious choice, consistent with Postgres already being required for `pnpm test`.
 
+### Step 5b — inbound DM Q&A
+
+Once the api is running (it's part of `pnpm dev`, on `:3001`), replying to the standup DM
+advances through the questions one at a time. `skip` records "(skipped)" and moves on;
+`skip all` aborts the report. The full outbound→inbound round-trip is covered by:
+
+```bash
+pnpm smoke:standup            # outbound DM → full Q&A → completed report + outro
+```
+
 ---
 
 ## Track B — Live end-to-end (real Supabase + real Slack)
