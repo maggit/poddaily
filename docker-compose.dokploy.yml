@@ -4,8 +4,8 @@
 # Set env vars (DATABASE_URL, AUTH_SECRET, NEXTAUTH_URL, SLACK_*, INTERNAL_API_SECRET) in
 # Dokploy's environment panel; they're interpolated below.
 #
-# Today: only `web` is real. Uncomment `redis`, `api`, `worker` at build-step 5 when those apps
-# (and their Dockerfiles) exist.
+# Services: web (Next.js), api (Bolt inbound DM), worker (BullMQ scheduler + outbound DM),
+# and redis (BullMQ broker). Postgres remains external (Supabase).
 
 services:
   web:
@@ -25,38 +25,37 @@ services:
     expose:
       - "3000"
 
-  # --- Step 5 (uncomment when apps/api, apps/worker, and their Dockerfiles exist) ---
-  # redis:
-  #   image: redis:7-alpine
-  #   volumes:
-  #     - redisdata:/data
-  #
-  # api:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.api
-  #   environment:
-  #     DATABASE_URL: ${DATABASE_URL}
-  #     REDIS_URL: redis://redis:6379
-  #     SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
-  #     SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET}
-  #     SLACK_CLIENT_ID: ${SLACK_CLIENT_ID}
-  #     SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET}
-  #     INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
-  #   expose:
-  #     - "3001"
-  #   depends_on: [redis]
-  #
-  # worker:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.worker
-  #   environment:
-  #     DATABASE_URL: ${DATABASE_URL}
-  #     REDIS_URL: redis://redis:6379
-  #     SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
-  #     INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
-  #   depends_on: [redis]
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redisdata:/data
 
-# volumes:
-#   redisdata:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
+      SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET}
+      SLACK_CLIENT_ID: ${SLACK_CLIENT_ID}
+      SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
+    expose:
+      - "3001"
+    depends_on: [redis]
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
+    depends_on: [redis]
+
+volumes:
+  redisdata:

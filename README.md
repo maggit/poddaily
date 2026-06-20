@@ -20,7 +20,7 @@ Checked items are implemented; unchecked are planned. Updated at the end of each
 - [x] Member management with per-member permissions + timezone capture
 - [x] Standup configuration (questions, schedule, intro/outro)
 - [x] Per-user-timezone scheduler (Step 5a — outbound DM only; Q&A engine in 5b)
-- [ ] Conversational DM Q&A (one question at a time, skip / skip all, timeout)
+- [x] Conversational DM Q&A (one question at a time, skip / skip all)
 - [ ] Channel broadcast posted as the user, threaded under a daily opening message
 
 **Phase 2 — Admin UX:** today's dashboard, participation stats, one-click reminders,
@@ -79,6 +79,19 @@ Trigger a run immediately (instead of waiting for the daily tick):
 Env: `REDIS_URL` (BullMQ), `SLACK_BOT_TOKEN` (bot DM posting). In tests/smoke,
 `SLACK_API_BASE_URL` points the bot client at the local Slack stub.
 
+### Inbound DM Q&A (Step 5b)
+
+The conversational Q&A engine runs as the `apps/api` Bolt service. Members answer their
+standup one question at a time in the DM; `skip` records "(skipped)" and advances, `skip all`
+aborts the report. On the last question the report is marked `completed` and the outro is
+posted to the DM.
+
+    pnpm --filter @poddaily/api dev     # boots the Bolt service
+
+Env: `SLACK_SIGNING_SECRET` (Slack request-signature verification) and `SLACK_BOT_TOKEN`. It
+listens on `PORT` (default `3001`); its Slack **Event Subscriptions request URL** is
+`https://<api-domain>/slack/events`, subscribed to the `message.im` bot event.
+
 ## Configuration
 
 All configuration is via environment variables; copy `.env.example` to `.env.local`. Each
@@ -92,6 +105,8 @@ variable, where it comes from, and its local-vs-live value are documented in the
   default test run and needs Redis (consistent with Postgres already being required).
 - `pnpm smoke:standup-outbound` — outbound DM smoke: boots a real BullMQ queue + worker against
   Redis and the Slack stub, triggers a run, asserts DMs sent and `standup_reports` rows created.
+- `pnpm smoke:standup` — full outbound→inbound smoke: the outbound run above followed by the
+  inbound Q&A driven through `handleMessage` to a `completed` report + outro.
 - `pnpm smoke:phase1` — end-to-end smoke against the whole stack with a stubbed Slack.
 - A manual [live smoke runbook](ContextDB/02_architecture/testing-and-local-dev.md#live-smoke-runbook-before-shipping-a-phase)
   validates one real standup against a Slack dev workspace before a phase ships.
@@ -101,8 +116,10 @@ See [Testing & Local Dev](ContextDB/02_architecture/testing-and-local-dev.md).
 ## Deployment
 
 Hosted on **Dokploy** (self-hosted, Docker + Traefik) with a **Supabase cloud** Postgres. Each
-app is a Docker service (`web` now via `Dockerfile.web`; `api`/`worker`/Redis from Step 5 via
-`docker-compose.dokploy.yml`). Full step-by-step:
+app is a Docker service: `web` via `Dockerfile.web`, `api` via `Dockerfile.api`, and `worker`
+via `Dockerfile.worker` (both run via `tsx`), with Redis as a compose service — all activated
+in `docker-compose.dokploy.yml`. The `api` is mapped to a domain so Slack can reach its
+`/slack/events` request URL; the `worker` has no domain. Full step-by-step:
 **[Dokploy + Supabase runbook](ContextDB/02_architecture/deployment-dokploy.md)** (Railway is a
 documented alternative — same image — in the [Railway runbook](ContextDB/02_architecture/deployment-railway.md)).
 
