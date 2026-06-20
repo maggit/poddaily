@@ -33,4 +33,11 @@ COPY apps/worker/src ./apps/worker/src
 COPY packages/db ./packages/db
 COPY packages/shared ./packages/shared
 COPY packages/slack-client ./packages/slack-client
+# Per-package node_modules from the install stage. pnpm puts each workspace package's deps
+# (drizzle-orm, postgres, luxon, @slack/web-api) under packages/<p>/node_modules as symlinks
+# into the root .pnpm store. A clean clone (Dokploy/CI) has none to COPY from context, so
+# these MUST come from the deps stage or runtime imports like drizzle-orm won't resolve.
+COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=deps /app/packages/slack-client/node_modules ./packages/slack-client/node_modules
 CMD ["pnpm", "--filter", "@poddaily/worker", "start"]

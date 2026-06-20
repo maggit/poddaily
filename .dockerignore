@@ -1,0 +1,10 @@
+# Keep host build artifacts out of the build context so Docker builds match a clean
+# git clone (e.g. Dokploy/CI). Critically, excluding node_modules forces the image to
+# rely on the deps stage's pnpm install rather than silently copying the dev tree's
+# node_modules — which previously masked a missing-dependency bug in a local build.
+**/node_modules
+.git
+**/.next
+**/dist
+**/.turbo
+**/*.log
