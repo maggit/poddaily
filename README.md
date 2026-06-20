@@ -22,6 +22,7 @@ Checked items are implemented; unchecked are planned. Updated at the end of each
 - [x] Per-user-timezone scheduler (Step 5a — outbound DM only; Q&A engine in 5b)
 - [x] Conversational DM Q&A (one question at a time, skip / skip all)
 - [ ] Channel broadcast posted as the user, threaded under a daily opening message
+  - [x] Threaded broadcast shipped in Step 6a — bot posts each report under a daily opening message with the member's name/avatar (`chat:write.customize`); true post-as-user authorship is Step 6b
 
 **Phase 2 — Admin UX:** today's dashboard, participation stats, one-click reminders,
 pause/resume.
@@ -85,6 +86,16 @@ The conversational Q&A engine runs as the `apps/api` Bolt service. Members answe
 standup one question at a time in the DM; `skip` records "(skipped)" and advances, `skip all`
 aborts the report. On the last question the report is marked `completed` and the outro is
 posted to the DM.
+
+**Channel broadcast (Step 6a).** On completion the report is also broadcast to the team's
+Slack channel: the worker posts a `📋 Daily Standup … Reported: n out of total` opening message
+once per run, and the api posts each completed report as a threaded Block Kit reply under it
+(attributed to the member via `chat:write.customize` — the bot posts with the member's
+name/avatar) and updates the counter. The broadcast is best-effort: a post failure is logged
+as `[broadcast] degraded` and swallowed, never reverting the completed report. **The bot must
+be invited to each team's Slack channel** (`/invite @poddaily`), otherwise `chat.postMessage`
+returns `not_in_channel` and the broadcast is logged as degraded. (True post-as-user
+authorship is Step 6b; 6a's name/avatar path is the permanent fallback.)
 
     pnpm --filter @poddaily/api dev     # boots the Bolt service
 
