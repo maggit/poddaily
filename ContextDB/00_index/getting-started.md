@@ -129,6 +129,16 @@ message in the team channel — the bot posts each report with the member's name
 member of that channel (`/invite @poddaily`) or the post is logged as degraded. `pnpm
 smoke:standup` covers the broadcast (opening message + threaded reply + counter).
 
+### Step 6b — connect to post as yourself
+
+Unconnected members get a **Connect** button in their standup DM. After a one-time OAuth
+(`/api/slack/install`), poddaily holds that member's Slack user token and posts their reports
+**as the real user** — a true user message, **no "APP" badge**. Members who skip the connect
+stay on the 6a name/avatar fallback (`chat:write.customize`). `pnpm smoke:standup` covers it
+(asserts the report posted with the `xoxp` user token). For the live flow the Slack app needs
+the **`chat:write` user scope** (already in the manifest) and **`INTERNAL_API_SECRET` set on
+the `api` service** (the api decrypts the stored user token to post).
+
 ---
 
 ## Track B — Live end-to-end (real Supabase + real Slack)

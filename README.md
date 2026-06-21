@@ -21,8 +21,8 @@ Checked items are implemented; unchecked are planned. Updated at the end of each
 - [x] Standup configuration (questions, schedule, intro/outro)
 - [x] Per-user-timezone scheduler (Step 5a — outbound DM only; Q&A engine in 5b)
 - [x] Conversational DM Q&A (one question at a time, skip / skip all)
-- [ ] Channel broadcast posted as the user, threaded under a daily opening message
-  - [x] Threaded broadcast shipped in Step 6a — bot posts each report under a daily opening message with the member's name/avatar (`chat:write.customize`); true post-as-user authorship is Step 6b
+- [x] Channel broadcast posted as the user, threaded under a daily opening message
+  - Connected members post via their own Slack user token (true authorship, no "APP" badge, counts as a user message in Slack analytics); unconnected members fall back to a bot post (`chat:write.customize`) with a "Connect" nudge — Step 6a delivered the broadcast/threading, Step 6b the post-as-user
 
 **Phase 2 — Admin UX:** today's dashboard, participation stats, one-click reminders,
 pause/resume.
@@ -94,8 +94,17 @@ once per run, and the api posts each completed report as a threaded Block Kit re
 name/avatar) and updates the counter. The broadcast is best-effort: a post failure is logged
 as `[broadcast] degraded` and swallowed, never reverting the completed report. **The bot must
 be invited to each team's Slack channel** (`/invite @poddaily`), otherwise `chat.postMessage`
-returns `not_in_channel` and the broadcast is logged as degraded. (True post-as-user
-authorship is Step 6b; 6a's name/avatar path is the permanent fallback.)
+returns `not_in_channel` and the broadcast is logged as degraded.
+
+**Step 6b** makes connected members post **as themselves**. Each member completes a one-time
+reporter user-OAuth (`/api/slack/install` → `/api/slack/oauth/callback`) granting a `chat:write`
+**user token**, stored AES-GCM-encrypted; the api then posts that member's report with their own
+user token — a true user message, **no "APP" badge**, counted as a user message in Slack
+analytics. Unconnected members keep the 6a name/avatar fallback (`chat:write.customize`) plus a
+"Connect to post as yourself" nudge in the DM intro. For this to work the Slack app needs the
+**`chat:write` user scope** and the redirect URL `${web}/api/slack/oauth/callback`;
+**`INTERNAL_API_SECRET` must be set on the `api` service** (it decrypts the stored user token);
+and the member must be **in the channel** for their token to post there.
 
     pnpm --filter @poddaily/api dev     # boots the Bolt service
 
