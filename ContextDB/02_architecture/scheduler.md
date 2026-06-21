@@ -8,7 +8,7 @@ How poddaily decides *when* to DM each member. Driven by the
 
 - **BullMQ + Redis** — repeatable jobs and per-member send jobs.
 - **`worker/scheduler.ts`** — reconciles repeatable jobs with the set of active standups.
-- **Jobs:** `send-standup-dm`, `complete-run`, and a timeout sweeper.
+- **Jobs:** `open-run`, `send-dm`, and `timeout-report`.
 
 ## Repeatable job per standup
 
@@ -45,10 +45,16 @@ failures land in the BullMQ failed set (delivery-success metric is tracked from 
 
 ## Completion & timeout
 
-- **`complete-run`** — enqueued to finalize the run after the day's send window; sets the
-  run `completed`.
-- **Timeout sweeper** — any `standup_reports` row still `in_progress` 4 hours after its DM
-  started is marked `timed_out`; such partials are never broadcast.
+- **`timeout-report`** — a **per-report** BullMQ job enqueued by `sendDm` when it inserts the
+  member's `in_progress` report, delayed `STANDUP_TIMEOUT_MS` (default 4h). On fire it marks a
+  still-`in_progress` report `timed_out` (no-op if the member already finished). The job delay
+  encodes the deadline — there is no clock recheck inside the handler.
+- **Run completion is event-driven** via `finalizeRunIfDone` (in `@poddaily/db`), called from
+  **both** the `timeout-report` handler **and** the api on report completion. It marks the run
+  `completed` once all of its reports are terminal (`completed` | `timed_out`). There is **no
+  separate `complete-run` timer job** — this event-driven model replaces the earlier
+  timer-based description.
+- `timed_out` partials are **never** broadcast (they never reach the broadcast path).
 
 ## Schedule-change reconciliation
 
