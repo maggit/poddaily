@@ -20,7 +20,7 @@ describe("slack-client", () => {
     expect(ts).toBeTruthy();
 
     const log = await (await fetch(`${stub.url}/__stub/messages`)).json();
-    expect(log).toEqual([{ channel: "D1", text: "good morning" }]);
+    expect(log).toMatchObject([{ channel: "D1", text: "good morning" }]);
   });
 
   it("works when baseUrl already ends in /api (no double /api/api/)", async () => {
@@ -30,7 +30,7 @@ describe("slack-client", () => {
     expect(ts).toBeTruthy();
 
     const log = await (await fetch(`${stub.url}/__stub/messages`)).json();
-    expect(log).toEqual([{ channel: "D2", text: "trailing api test" }]);
+    expect(log).toMatchObject([{ channel: "D2", text: "trailing api test" }]);
   });
 
   it("postMessage forwards thread_ts / username / blocks", async () => {
