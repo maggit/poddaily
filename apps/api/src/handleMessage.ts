@@ -1,4 +1,4 @@
-import { schema, eq, and, desc, getUserToken } from "@poddaily/db";
+import { schema, eq, and, desc, getUserToken, finalizeRunIfDone } from "@poddaily/db";
 import { advanceReport, buildOpeningMessage, buildReportBlocks } from "@poddaily/shared";
 import type { ReportAnswer } from "@poddaily/shared";
 import type { SlackClient } from "@poddaily/slack-client";
@@ -64,6 +64,11 @@ export async function handleMessage(deps: HandleMessageDeps, msg: IncomingDm): P
         .set({ status: "timed_out" })
         .where(eq(schema.standupReports.id, report.id));
       await slack.postMessage(msg.channel, ABORT_REPLY);
+      try {
+        await finalizeRunIfDone(db, run.id);
+      } catch (err) {
+        console.warn(`[finalize] degraded for run ${run.id}:`, (err as Error).message);
+      }
       return;
 
     case "next":
@@ -79,6 +84,11 @@ export async function handleMessage(deps: HandleMessageDeps, msg: IncomingDm): P
         .where(eq(schema.standupReports.id, report.id));
       await slack.postMessage(msg.channel, standup.outroMessage ?? DEFAULT_OUTRO);
       await broadcastReport(deps, { report, run, standup, answers: action.answers });
+      try {
+        await finalizeRunIfDone(db, run.id);
+      } catch (err) {
+        console.warn(`[finalize] degraded for run ${run.id}:`, (err as Error).message);
+      }
       return;
   }
 }

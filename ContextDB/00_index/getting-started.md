@@ -139,6 +139,15 @@ stay on the 6a name/avatar fallback (`chat:write.customize`). `pnpm smoke:standu
 the **`chat:write` user scope** (already in the manifest) and **`INTERNAL_API_SECRET` set on
 the `api` service** (the api decrypts the stored user token to post).
 
+### Step 7 — timeout & completion
+
+A member who never finishes their standup DM is marked `timed_out` after 4h
+(`STANDUP_TIMEOUT_MS`) and is **not** broadcast. The run closes (`completed`) once everyone is
+either done or timed out — completion is event-driven (no separate timer). `pnpm smoke:edges`
+covers it end-to-end (one member completes + broadcasts; one times out + is not broadcast; the
+run ends `completed`). Set `STANDUP_TIMEOUT_MS` small (e.g. `1500`) to exercise the timeout
+path quickly.
+
 ---
 
 ## Track B — Live end-to-end (real Supabase + real Slack)

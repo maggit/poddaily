@@ -14,6 +14,15 @@ export interface SendDmJob {
 /** Enqueue a send-standup-dm job, delayed `delayMs` from now (0 = immediate). */
 export type EnqueueSend = (job: SendDmJob, opts: { delayMs: number }) => Promise<void>;
 
+/** Payload for a per-report timeout-report job (fires `delayMs` after the DM started). */
+export interface TimeoutJob {
+  runId: string;
+  slackUserId: string;
+}
+
+/** Enqueue a timeout-report job, delayed `delayMs` from now. */
+export type EnqueueTimeout = (job: TimeoutJob, opts: { delayMs: number }) => Promise<void>;
+
 export interface OpenRunDeps {
   db: Db;
   enqueueSend: EnqueueSend;
@@ -23,4 +32,5 @@ export interface OpenRunDeps {
 export interface SendDmDeps {
   db: Db;
   slack: SlackClient;
+  enqueueTimeout: EnqueueTimeout;
 }

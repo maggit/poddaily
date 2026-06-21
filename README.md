@@ -2,7 +2,8 @@
 
 > Self-hosted, Slack-native daily standup bot + admin platform. Open-source, no per-seat cost.
 
-**Status:** 🚧 In development — **Phase 1 (Core)**. Nothing is shipped yet; this README and
+**Status:** Phase 1 (Core) is **feature-complete** — all 7 build steps land with automated
+smokes green in CI; the remaining gates are the live-workspace runbook walks. This README and
 the feature checklist below grow as each phase lands.
 
 poddaily DMs each team member their standup questions in Slack, one at a time, then posts a
@@ -20,7 +21,7 @@ Checked items are implemented; unchecked are planned. Updated at the end of each
 - [x] Member management with per-member permissions + timezone capture
 - [x] Standup configuration (questions, schedule, intro/outro)
 - [x] Per-user-timezone scheduler (Step 5a — outbound DM only; Q&A engine in 5b)
-- [x] Conversational DM Q&A (one question at a time, skip / skip all)
+- [x] Conversational DM Q&A (one question at a time, skip / skip all, 4h timeout)
 - [x] Channel broadcast posted as the user, threaded under a daily opening message
   - Connected members post via their own Slack user token (true authorship, no "APP" badge, counts as a user message in Slack analytics); unconnected members fall back to a bot post (`chat:write.customize`) with a "Connect" nudge — Step 6a delivered the broadcast/threading, Step 6b the post-as-user
 
@@ -118,6 +119,10 @@ All configuration is via environment variables; copy `.env.example` to `.env.loc
 variable, where it comes from, and its local-vs-live value are documented in the
 [env var reference](ContextDB/00_index/getting-started.md#environment-variable-reference).
 
+`STANDUP_TIMEOUT_MS` (default `14400000` = 4h) is the per-report timeout deadline: after a
+member's standup DM has been open this long without finishing, the report is marked
+`timed_out` and is **not** broadcast. Lower it only for testing (e.g. `1500`).
+
 ## Testing
 
 - `pnpm test` — unit + integration. **Requires both Postgres and Redis** (`supabase start` +
@@ -153,7 +158,7 @@ the [project map](ContextDB/00_index/project-map.md): specs, architecture, and t
 
 | Phase | Scope |
 |---|---|
-| 1 — Core | Auth, team CRUD, standup config, Slack DM flow, channel broadcast, scheduler |
+| 1 — Core ✅ feature-complete | Auth, team CRUD, standup config, Slack DM flow, channel broadcast, scheduler |
 | 2 — Admin UX | Dashboard, participation stats, reminders, pause/resume |
 | 3 — Polish + launch | Deploy, env config, docs, pilot |
 | 4 — P1 features | Analytics, slash command, export webhook, streaks |
