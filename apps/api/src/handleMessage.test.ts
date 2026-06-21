@@ -214,4 +214,40 @@ describe("handleMessage", () => {
     else process.env.NEXTAUTH_URL = prevNextAuthUrl;
     await sql`update standup_runs set channel_opening_ts = null where id = ${runId}`;
   });
+
+  it("falls back to a bot post when the user-token post fails (revoked)", async () => {
+    const prevNextAuthUrl = process.env.NEXTAUTH_URL;
+    process.env.NEXTAUTH_URL = "https://web.example";
+    await sql`update standup_runs set channel_opening_ts = 'open_ts_b3' where id = ${runId}`;
+    await saveUserToken(db, SECRET, { slackUserId: USER, accessToken: "xoxp-revoked", scopes: "chat:write" });
+
+    const botPosts: Array<{ opts: any }> = [];
+    const slack = {
+      openDm: async () => "D",
+      postMessage: async (_c: string, _t: string, opts: any = {}) => { botPosts.push({ opts }); return "bot_ts"; },
+      updateMessage: async () => {},
+    };
+    // user client throws (simulating invalid_auth/token_revoked)
+    const makeUserSlackRevoked = () => ({
+      openDm: async () => "D",
+      postMessage: async () => { throw new Error("invalid_auth"); },
+      updateMessage: async () => {},
+    });
+
+    await handleMessage({ db, slack, secret: SECRET, makeUserSlack: makeUserSlackRevoked }, { slackUserId: USER, channel: DM, text: "a1" });
+    await handleMessage({ db, slack, secret: SECRET, makeUserSlack: makeUserSlackRevoked }, { slackUserId: USER, channel: DM, text: "a2" });
+
+    // degraded bot post happened (threaded, with the nudge), and channel_post_ts is the bot ts
+    const reply = botPosts.find((p) => p.opts?.threadTs === "open_ts_b3");
+    expect(reply).toBeTruthy();
+    expect(reply!.opts.username).toBeTruthy(); // chat:write.customize attribution
+    expect(JSON.stringify(reply!.opts.blocks)).toContain("/api/slack/install"); // nudge present
+    const [r] = await sql`select channel_post_ts from standup_reports where slack_user_id = ${USER}`;
+    expect(r.channel_post_ts).toBe("bot_ts");
+
+    await sql`delete from slack_user_tokens where slack_user_id = ${USER}`;
+    if (prevNextAuthUrl === undefined) delete process.env.NEXTAUTH_URL;
+    else process.env.NEXTAUTH_URL = prevNextAuthUrl;
+    await sql`update standup_runs set channel_opening_ts = null where id = ${runId}`;
+  });
 });

@@ -121,7 +121,12 @@ async function broadcastReport(
       displayName: report.slackDisplayName,
       answers,
     });
-    const token = await getUserToken(db, secret, report.slackUserId);
+    let token: string | null = null;
+    try {
+      token = await getUserToken(db, secret, report.slackUserId);
+    } catch (err) {
+      console.warn(`[broadcast] could not read user token for ${report.slackUserId}; degrading:`, (err as Error).message);
+    }
 
     let postTs: string | null = null;
     if (token) {
