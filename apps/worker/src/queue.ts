@@ -1,5 +1,5 @@
 import { Queue } from "bullmq";
-import type { SendDmJob, EnqueueSend } from "./types";
+import type { SendDmJob, EnqueueSend, TimeoutJob, EnqueueTimeout } from "./types";
 
 export const QUEUE_NAME = "standup";
 
@@ -18,6 +18,19 @@ export function createQueue(): Queue {
 export function makeEnqueueSend(queue: Queue): EnqueueSend {
   return async (job: SendDmJob, opts: { delayMs: number }) => {
     await queue.add("send-dm", job, {
+      delay: opts.delayMs,
+      attempts: 3,
+      backoff: { type: "exponential", delay: 30_000 },
+      removeOnComplete: true,
+      removeOnFail: false,
+    });
+  };
+}
+
+/** An EnqueueTimeout backed by a real BullMQ queue (the timeout-report job). */
+export function makeEnqueueTimeout(queue: Queue): EnqueueTimeout {
+  return async (job: TimeoutJob, opts: { delayMs: number }) => {
+    await queue.add("timeout-report", job, {
       delay: opts.delayMs,
       attempts: 3,
       backoff: { type: "exponential", delay: 30_000 },

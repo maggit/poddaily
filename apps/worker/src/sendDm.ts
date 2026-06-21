@@ -2,6 +2,8 @@ import { schema, eq, and, desc, hasUserToken } from "@poddaily/db";
 import { interpolateLastReportDate } from "@poddaily/shared";
 import type { SendDmDeps, SendDmJob } from "./types";
 
+const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
+
 /**
  * Open the member's DM, post the intro (if any) + the interpolated first question,
  * and insert the in_progress report. Idempotent: if a report already exists for
@@ -9,7 +11,7 @@ import type { SendDmDeps, SendDmJob } from "./types";
  * double-DM. The unique (run_id, slack_user_id) constraint is the backstop.
  */
 export async function sendDm(deps: SendDmDeps, job: SendDmJob): Promise<void> {
-  const { db, slack } = deps;
+  const { db, slack, enqueueTimeout } = deps;
   const { runId, standupId, slackUserId, slackDisplayName } = job;
 
   const existing = await db
@@ -69,4 +71,9 @@ export async function sendDm(deps: SendDmDeps, job: SendDmJob): Promise<void> {
       dmThreadTs: firstTs ?? q1Ts,
     })
     .onConflictDoNothing({ target: [schema.standupReports.runId, schema.standupReports.slackUserId] });
+
+  // Per-report 4h timeout (Step 7). Read at call time so tests can override. The delay
+  // encodes the deadline; the timeout-report handler no-ops if the member finished first.
+  const timeoutMs = Number(process.env.STANDUP_TIMEOUT_MS ?? FOUR_HOURS_MS);
+  await enqueueTimeout({ runId, slackUserId }, { delayMs: timeoutMs });
 }

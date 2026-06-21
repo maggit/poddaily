@@ -1,9 +1,10 @@
 import type { Job, Queue } from "bullmq";
 import type { SlackClient } from "@poddaily/slack-client";
-import { makeEnqueueSend } from "./queue";
+import { makeEnqueueSend, makeEnqueueTimeout } from "./queue";
 import { openRun } from "./openRun";
 import { sendDm } from "./sendDm";
-import type { Db, SendDmJob } from "./types";
+import { timeoutReport } from "./timeoutReport";
+import type { Db, SendDmJob, TimeoutJob } from "./types";
 
 export interface ProcessorDeps {
   db: Db;
@@ -19,12 +20,15 @@ export interface ProcessorDeps {
 export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<void> {
   const { db, slack, queue } = deps;
   const enqueueSend = makeEnqueueSend(queue);
+  const enqueueTimeout = makeEnqueueTimeout(queue);
   return async (job: Job): Promise<void> => {
     if (job.name === "open-run") {
       const { standupId } = job.data as { standupId: string };
       await openRun({ db, enqueueSend, slack }, standupId, new Date());
     } else if (job.name === "send-dm") {
-      await sendDm({ db, slack }, job.data as SendDmJob);
+      await sendDm({ db, slack, enqueueTimeout }, job.data as SendDmJob);
+    } else if (job.name === "timeout-report") {
+      await timeoutReport({ db }, job.data as TimeoutJob);
     } else {
       throw new Error(`[worker] unknown job name: ${job.name}`);
     }

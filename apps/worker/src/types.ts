@@ -32,4 +32,5 @@ export interface OpenRunDeps {
 export interface SendDmDeps {
   db: Db;
   slack: SlackClient;
+  enqueueTimeout: EnqueueTimeout;
 }
