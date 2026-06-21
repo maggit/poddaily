@@ -64,6 +64,11 @@ export async function handleMessage(deps: HandleMessageDeps, msg: IncomingDm): P
         .set({ status: "timed_out" })
         .where(eq(schema.standupReports.id, report.id));
       await slack.postMessage(msg.channel, ABORT_REPLY);
+      try {
+        await finalizeRunIfDone(db, run.id);
+      } catch (err) {
+        console.warn(`[finalize] degraded for run ${run.id}:`, (err as Error).message);
+      }
       return;
 
     case "next":

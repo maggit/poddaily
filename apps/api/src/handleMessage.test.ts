@@ -130,6 +130,17 @@ describe("handleMessage", () => {
     expect(run.completed_at).not.toBeNull();
   });
 
+  it("finalizes the run when the last report aborts via skip all", async () => {
+    await sql`update standup_runs set status = 'running' where id = ${runId}`;
+    const slack = fakeSlack();
+    await handleMessage({ db, slack, secret: SECRET, makeUserSlack }, { slackUserId: USER, channel: DM, text: "skip all" });
+    const [r] = await sql`select status from standup_reports where slack_user_id = ${USER}`;
+    expect(r.status).toBe("timed_out");
+    const [run] = await sql`select status, completed_at from standup_runs where id = ${runId}`;
+    expect(run.status).toBe("completed");
+    expect(run.completed_at).not.toBeNull();
+  });
+
   it("ignores a DM when the user has no open report", async () => {
     await sql`delete from standup_reports where slack_user_id = ${USER}`;
     const slack = fakeSlack();
