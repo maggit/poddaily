@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { Queue, Worker } from "bullmq";
-import { createDb } from "@poddaily/db";
+import { createDb, saveUserToken } from "@poddaily/db";
 import { cronFromWeekly } from "@poddaily/shared";
 import { createSlackClient } from "@poddaily/slack-client";
 import { startSlackStub, type SlackStub } from "@poddaily/slack-stub";
@@ -9,6 +9,8 @@ import { createProcessor } from "../../worker/src/processor";
 import { handleMessage } from "../src/handleMessage";
 
 const REDIS_URL = process.env.REDIS_URL ?? "redis://127.0.0.1:6379";
+const SECRET = "test-internal-api-secret-0123456789";
+const makeUserSlack = (token: string) => createSlackClient({ token });
 const QUEUE_NAME = "standup-smoke-5b"; // isolated queue name — must not collide with the outbound smoke
 const { db, sql } = createDb();
 const CHAN = "C_SMOKE_STANDUP";
@@ -44,6 +46,7 @@ afterAll(async () => {
 // delete reports → runs → members → teams to avoid FK cascade issues (standup_runs.standup_id
 // is ON DELETE no action, so orphan runs from an unclean prior exit would block the cascade)
 async function cleanup() {
+  await sql`delete from slack_user_tokens where slack_user_id = ${USER}`;
   await sql`delete from standup_reports where slack_user_id = ${USER}`;
   await sql`delete from standup_runs where standup_id in (select id from standups where team_id in (select id from teams where slack_channel_id = ${CHAN}))`;
   await sql`delete from standups where team_id in (select id from teams where slack_channel_id = ${CHAN})`;
@@ -86,11 +89,15 @@ describe("smoke:standup", () => {
     const inProgress = await sql`select * from standup_reports where slack_user_id = ${USER} and status = 'in_progress'`;
     expect(inProgress).toHaveLength(1);
 
+    // Step 6b: this member has connected (stored user token), so the completed report
+    // broadcasts AS THE USER (xoxp-…) instead of the bot with a username override.
+    await saveUserToken(db, SECRET, { slackUserId: USER, accessToken: "xoxp-stub-user", scopes: "chat:write" });
+
     // INBOUND (Step 5b): the member answers each question. handleMessage persists the
     // answer, posts the next question, then completes the report + posts the outro.
     const slack = createSlackClient();
-    await handleMessage({ db, slack }, { slackUserId: USER, channel: DM, text: "Shipped the scheduler" });
-    await handleMessage({ db, slack }, { slackUserId: USER, channel: DM, text: "Build the inbound engine" });
+    await handleMessage({ db, slack, secret: SECRET, makeUserSlack }, { slackUserId: USER, channel: DM, text: "Shipped the scheduler" });
+    await handleMessage({ db, slack, secret: SECRET, makeUserSlack }, { slackUserId: USER, channel: DM, text: "Build the inbound engine" });
 
     const [report] = await sql`select * from standup_reports where slack_user_id = ${USER}`;
     expect(report.status).toBe("completed");
@@ -104,17 +111,22 @@ describe("smoke:standup", () => {
 
     // --- broadcast assertions (6a) ---
     const allMsgs = (await (await fetch(`${stub.url}/__stub/messages`)).json()) as Array<{
-      channel: string; text: string; thread_ts?: string; username?: string;
+      channel: string; text: string; thread_ts?: string; username?: string; token?: string;
     }>;
     const channelMsgs = allMsgs.filter((m) => m.channel === CHAN);
 
     // opening message posted to the team channel by the worker
     expect(channelMsgs.some((m) => m.text.includes("Reported: 0 out of 1"))).toBe(true);
 
-    // threaded report reply, attributed to the member
-    const reply = channelMsgs.find((m) => m.thread_ts && m.username === "Standup Tester");
+    // threaded report reply — 6b posts AS THE USER (xoxp-… token, no username override),
+    // so it's identified by thread_ts + the user Bearer token, not by a username.
+    const reply = channelMsgs.find((m) => m.thread_ts && m.token === "xoxp-stub-user");
     expect(reply).toBeTruthy();
     expect(reply!.text).toContain("Build the inbound engine");
+
+    // 6b: the threaded report was posted with the connected member's USER token.
+    const channelReply = allMsgs.find((m) => m.channel === CHAN && (m as any).thread_ts);
+    expect((channelReply as any).token).toBe("xoxp-stub-user");
 
     // channel_post_ts persisted on the report
     const [reportRow] = await sql`select channel_post_ts from standup_reports where slack_user_id = ${USER}`;

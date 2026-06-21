@@ -13,6 +13,7 @@ export interface RecordedMessage {
   username?: string;
   icon_url?: string;
   blocks?: string; // raw JSON string as Slack receives it (form-encoded)
+  token?: string; // the Bearer token that authenticated the post (user vs bot)
 }
 
 export interface RecordedUpdate {
@@ -72,6 +73,22 @@ export function startSlackStub(port = 4010): Promise<SlackStub> {
       return json(200, { ok: true, ...STUB_USER });
     }
 
+    // --- Reporter user-OAuth (post-as-user) ---
+    if (u.pathname === "/oauth/v2/authorize") {
+      const redirectUri = u.searchParams.get("redirect_uri") ?? "";
+      const state = u.searchParams.get("state") ?? "";
+      const location = `${redirectUri}?code=STUB_USER_CODE&state=${encodeURIComponent(state)}`;
+      res.writeHead(302, { location });
+      return res.end();
+    }
+    if (u.pathname === "/api/oauth.v2.access") {
+      await readBody(req); // drain
+      return json(200, {
+        ok: true,
+        authed_user: { id: "U_STUB_USER", access_token: "xoxp-stub-user", scope: "chat:write", token_type: "user" },
+      });
+    }
+
     // --- Web API (bot) ---
     if (u.pathname === "/api/conversations.open") {
       const body = await readBody(req);
@@ -79,6 +96,8 @@ export function startSlackStub(port = 4010): Promise<SlackStub> {
       return json(200, { ok: true, channel: { id: dmChannelId(users) } });
     }
     if (u.pathname === "/api/chat.postMessage") {
+      const authHeader = req.headers["authorization"];
+      const auth = (Array.isArray(authHeader) ? authHeader[0] : authHeader) ?? "";
       const body = await readBody(req);
       messages.push({
         channel: body.get("channel") ?? "",
@@ -87,6 +106,7 @@ export function startSlackStub(port = 4010): Promise<SlackStub> {
         username: body.get("username") ?? undefined,
         icon_url: body.get("icon_url") ?? undefined,
         blocks: body.get("blocks") ?? undefined,
+        token: auth.replace(/^Bearer\s+/i, "") || undefined,
       });
       return json(200, { ok: true, ts: String(tsCounter++) });
     }

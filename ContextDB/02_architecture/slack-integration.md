@@ -12,6 +12,13 @@ conflating admin identity, reporter posting rights, and bot messaging.
 
 ## 2. Reporter user-OAuth (post-as-user)
 
+> **Status — implemented in Step 6b.** `/api/slack/install` + `/api/slack/oauth/callback`
+> (apps/web) drive the one-time consent; the user token is stored AES-GCM-encrypted in
+> `slack_user_tokens`. The api posts each connected member's report with their **user token**
+> (true authorship — no "APP" badge), degrading to `chat:write.customize` + a Connect nudge
+> when the member is unconnected or on decrypt-or-post failure. The worker only shows the
+> Connect button (existence check on the token — it never decrypts).
+
 Driven by the [post-as-user ADR](../03_decisions/2026-06-14-post-as-user-tokens.md).
 
 - Separate install link: `GET /api/slack/install` → Slack consent → `GET /api/slack/oauth/callback`.

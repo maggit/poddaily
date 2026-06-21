@@ -92,4 +92,17 @@ describe("slack web api stub", () => {
     const updates = (await (await fetch(`${stub.url}/__stub/updates`)).json()) as Array<Record<string, string>>;
     expect(updates[0]).toMatchObject({ channel: "C1", ts: "999.0", text: "Reported: 1 out of 1" });
   });
+
+  it("fakes oauth.v2.access and records the Bearer token on postMessage", async () => {
+    await postForm(`${stub.url}/__stub/reset`, {});
+    const access = await (await fetch(`${stub.url}/api/oauth.v2.access`, { method: "POST" })).json();
+    expect(access).toMatchObject({ ok: true, authed_user: { id: "U_STUB_USER", access_token: "xoxp-stub-user" } });
+    await fetch(`${stub.url}/api/chat.postMessage`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", authorization: "Bearer xoxp-stub-user" },
+      body: new URLSearchParams({ channel: "C1", text: "as me" }),
+    });
+    const [msg] = (await (await fetch(`${stub.url}/__stub/messages`)).json()) as Array<Record<string, string>>;
+    expect(msg).toMatchObject({ channel: "C1", token: "xoxp-stub-user" });
+  });
 });

@@ -1,4 +1,4 @@
-import { schema, eq, and, desc } from "@poddaily/db";
+import { schema, eq, and, desc, hasUserToken } from "@poddaily/db";
 import { interpolateLastReportDate } from "@poddaily/shared";
 import type { SendDmDeps, SendDmJob } from "./types";
 
@@ -41,6 +41,22 @@ export async function sendDm(deps: SendDmDeps, job: SendDmJob): Promise<void> {
     firstTs = await slack.postMessage(channelId, standup.introMessage);
   }
   const q1Ts = await slack.postMessage(channelId, q1Text);
+
+  // Nudge unconnected members to connect so their reports post as themselves (Step 6b).
+  // Existence check only — the worker never decrypts tokens.
+  const webUrl = process.env.NEXTAUTH_URL;
+  if (webUrl && !(await hasUserToken(db, slackUserId))) {
+    await slack.postMessage(
+      channelId,
+      "Want your standups to post as you in the channel? Connect once.",
+      {
+        blocks: [
+          { type: "section", text: { type: "mrkdwn", text: "Want your standups to post as *you* in the channel? Connect once:" } },
+          { type: "actions", elements: [{ type: "button", text: { type: "plain_text", text: "Connect to post as yourself" }, url: `${webUrl}/api/slack/install` }] },
+        ],
+      },
+    );
+  }
 
   await db
     .insert(schema.standupReports)

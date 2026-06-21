@@ -1,7 +1,8 @@
 # ADR: Post reports as the user via Slack user tokens
 
 - **Date:** 2026-06-14
-- **Status:** Accepted
+- **Status:** Accepted — implemented in Step 6b
+  ([build log](../08_logs/2026-06-20-step6b-reporter-user-oauth.md))
 - **Resolves:** PRD Open Question #1 (blocking)
 
 ## Context
