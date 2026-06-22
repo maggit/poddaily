@@ -105,7 +105,9 @@ analytics. Unconnected members keep the 6a name/avatar fallback (`chat:write.cus
 "Connect to post as yourself" nudge in the DM intro. For this to work the Slack app needs the
 **`chat:write` user scope** and the redirect URL `${web}/api/slack/oauth/callback`;
 **`INTERNAL_API_SECRET` must be set on the `api` service** (it decrypts the stored user token);
-and the member must be **in the channel** for their token to post there.
+and the member must be **in the channel** for their token to post there. On a successful connect,
+the member gets a Slack DM confirmation ("✅ You're connected!"), so the **`web` service also needs
+`SLACK_BOT_TOKEN`** set (to send that DM) in addition to `SLACK_CLIENT_ID`/`SLACK_CLIENT_SECRET`.
 
     pnpm --filter @poddaily/api dev     # boots the Bolt service
 
