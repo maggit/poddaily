@@ -105,4 +105,14 @@ describe("slack web api stub", () => {
     const [msg] = (await (await fetch(`${stub.url}/__stub/messages`)).json()) as Array<Record<string, string>>;
     expect(msg).toMatchObject({ channel: "C1", token: "xoxp-stub-user" });
   });
+
+  it("fakes users.info with a profile image, tz and real_name", async () => {
+    const res = await (await fetch(`${stub.url}/api/users.info`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ user: "U123" }),
+    })).json();
+    expect(res).toMatchObject({ ok: true, user: { id: "U123", tz: "America/New_York", real_name: "Stub User" } });
+    expect(res.user.profile.image_512).toContain("U123");
+  });
 });
