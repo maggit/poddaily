@@ -1,5 +1,5 @@
-import { schema, eq, and, desc, getUserToken, finalizeRunIfDone } from "@poddaily/db";
-import { advanceReport, buildOpeningMessage, buildReportBlocks } from "@poddaily/shared";
+import { schema, eq, and, desc, getUserToken, finalizeRunIfDone, lastReportDateBefore } from "@poddaily/db";
+import { advanceReport, buildOpeningMessage, buildReportBlocks, interpolateLastReportDate } from "@poddaily/shared";
 import type { ReportAnswer } from "@poddaily/shared";
 import type { SlackClient } from "@poddaily/slack-client";
 import type { createDb } from "@poddaily/db";
@@ -126,10 +126,11 @@ async function broadcastReport(
       .where(eq(schema.teams.id, standup.teamId));
     if (!team?.channelId) return;
 
+    const lastDate = await lastReportDateBefore(db, report.slackUserId, report.createdAt ?? new Date());
     const built = buildReportBlocks({
       standupName: standup.name,
       displayName: report.slackDisplayName,
-      answers,
+      answers: answers.map((a) => ({ ...a, questionText: interpolateLastReportDate(a.questionText, lastDate) })),
     });
     let token: string | null = null;
     try {
