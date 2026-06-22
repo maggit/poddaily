@@ -61,6 +61,9 @@ importers:
       '@poddaily/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@poddaily/slack-client':
+        specifier: workspace:*
+        version: link:../../packages/slack-client
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

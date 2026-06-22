@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyState } from "../../../../../lib/oauth-state";
 import { createDb, saveUserToken } from "@poddaily/db";
+import { createSlackClient } from "@poddaily/slack-client";
 
 function page(title: string, body: string, status: number): NextResponse {
   return new NextResponse(
@@ -43,5 +44,16 @@ export async function GET(req: Request): Promise<NextResponse> {
     accessToken: data.authed_user.access_token,
     scopes: data.authed_user.scope ?? "chat:write",
   });
+
+  // Best-effort connect confirmation DM (so the user gets feedback in Slack, not just the
+  // browser tab). A delivery failure must not block the connection — the token is stored.
+  try {
+    const slack = createSlackClient();
+    const dm = await slack.openDm(data.authed_user.id);
+    await slack.postMessage(dm, "✅ You're connected! Your standup reports will now post to the channel as you.");
+  } catch (err) {
+    console.warn(`[connect] confirmation DM failed for ${data.authed_user.id}:`, (err as Error).message);
+  }
+
   return page("Connected ✅", "poddaily will now post your standups as you. You can close this tab.", 200);
 }
