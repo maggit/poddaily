@@ -141,6 +141,35 @@ describe("handleMessage", () => {
     expect(run.completed_at).not.toBeNull();
   });
 
+  it("interpolates {last_report_date} in the broadcast question text", async () => {
+    await sql`update standup_runs set channel_opening_ts = 'open_ts_lrd', status = 'running' where id = ${runId}`;
+    // make q1 contain the token for this run's standup
+    await sql`update standups set questions = ${JSON.stringify([{ id: "q1", text: "What have you done since {last_report_date}?", type: "text" }, { id: "q2", text: "What will you do?", type: "text" }])} where id = (select standup_id from standup_runs where id = ${runId})`;
+    // a prior completed report for the same user → a concrete last date
+    // (insert directly so it predates this run)
+    await sql`insert into standup_runs (standup_id, scheduled_at, scheduled_date, status) values ((select standup_id from standup_runs where id = ${runId}), '2026-06-20T10:00:00Z', '2026-06-20', 'completed') returning id`;
+    await sql`insert into standup_reports (run_id, slack_user_id, slack_display_name, answers, status, reported_at, created_at) values ((select id from standup_runs where scheduled_date='2026-06-20' and standup_id=(select standup_id from standup_runs where id=${runId}) limit 1), ${USER}, 'HM Tester', ${JSON.stringify([])}, 'completed', '2026-06-20T10:00:00Z', '2026-06-20T10:00:00Z')`;
+
+    const posts: Array<{ opts: any }> = [];
+    const slack = { openDm: async () => "D", postMessage: async (_c: string, _t: string, opts: any = {}) => { posts.push({ opts }); return "ts"; }, updateMessage: async () => {} };
+    const makeUserSlackLocal = () => ({ openDm: async () => "D", postMessage: async () => "ts", updateMessage: async () => {} });
+
+    await handleMessage({ db, slack, secret: SECRET, makeUserSlack: makeUserSlackLocal }, { slackUserId: USER, channel: DM, text: "a1" });
+    await handleMessage({ db, slack, secret: SECRET, makeUserSlack: makeUserSlackLocal }, { slackUserId: USER, channel: DM, text: "a2" });
+
+    const reply = posts.find((p) => p.opts?.threadTs === "open_ts_lrd");
+    expect(reply).toBeTruthy();
+    const blocksStr = JSON.stringify(reply!.opts.blocks);
+    expect(blocksStr).not.toContain("{last_report_date}"); // interpolated, not raw
+    expect(blocksStr).toContain("Jun 20"); // the prior report's date, formatted
+
+    // cleanup the extra prior run/report this test inserted + restore the standup questions
+    await sql`delete from standup_reports where slack_user_id = ${USER} and reported_at = '2026-06-20T10:00:00Z'`;
+    await sql`delete from standup_runs where scheduled_date = '2026-06-20' and standup_id = (select standup_id from standup_runs where id = ${runId})`;
+    await sql`update standups set questions = ${JSON.stringify([{ id: "q1", text: "What did you do?", type: "text" }, { id: "q2", text: "What will you do?", type: "text" }])} where id = (select standup_id from standup_runs where id = ${runId})`;
+    await sql`update standup_runs set channel_opening_ts = null where id = ${runId}`;
+  });
+
   it("ignores a DM when the user has no open report", async () => {
     await sql`delete from standup_reports where slack_user_id = ${USER}`;
     const slack = fakeSlack();

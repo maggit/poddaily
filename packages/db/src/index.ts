@@ -2,6 +2,7 @@ export * as schema from "./schema";
 export { createDb } from "./client";
 export { saveUserToken, getUserToken, hasUserToken } from "./tokens";
 export { finalizeRunIfDone } from "./runs";
+export { lastReportDateBefore } from "./reports";
 
 // Re-export the Drizzle query operators the app needs, so consumers import them
 // from @poddaily/db and share this package's single drizzle-orm instance (avoids
