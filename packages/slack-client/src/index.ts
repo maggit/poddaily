@@ -18,6 +18,8 @@ export interface SlackClient {
   postMessage(channel: string, text: string, opts?: PostMessageOptions): Promise<string>;
   /** Edit an existing message (chat.update). */
   updateMessage(channel: string, ts: string, opts: { text: string; blocks?: unknown[] }): Promise<void>;
+  /** Fetch a user's Slack profile (users.info). Needs the bot `users:read` scope. */
+  getUserProfile(slackUserId: string): Promise<{ image: string | null; tz: string | null; realName: string | null }>;
 }
 
 export interface SlackClientOptions {
@@ -62,6 +64,17 @@ export function createSlackClient(opts: SlackClientOptions = {}): SlackClient {
         text: opts.text,
         ...(opts.blocks ? { blocks: opts.blocks as never } : {}),
       });
+    },
+    async getUserProfile(slackUserId) {
+      const res = await web.users.info({ user: slackUserId });
+      const u = res.user as
+        | { real_name?: string; tz?: string; profile?: { image_192?: string; image_512?: string } }
+        | undefined;
+      return {
+        image: u?.profile?.image_512 ?? u?.profile?.image_192 ?? null,
+        tz: u?.tz ?? null,
+        realName: u?.real_name ?? null,
+      };
     },
   };
 }

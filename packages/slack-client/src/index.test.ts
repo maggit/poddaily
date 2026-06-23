@@ -50,4 +50,12 @@ describe("slack-client", () => {
     const [upd] = (await (await fetch(`${stub.url}/__stub/updates`)).json()) as Array<Record<string, string>>;
     expect(upd).toMatchObject({ channel: "C_CHAN", ts: "200.7", text: "Reported: 2 out of 3" });
   });
+
+  it("getUserProfile returns image / tz / realName from users.info", async () => {
+    const client = createSlackClient({ baseUrl: stub.url, token: "xoxb-test" });
+    const p = await client.getUserProfile("U777");
+    expect(p.image).toContain("U777");
+    expect(p.tz).toBe("America/New_York");
+    expect(p.realName).toBe("Stub User");
+  });
 });
