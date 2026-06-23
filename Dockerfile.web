@@ -8,6 +8,7 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/web/package.json apps/web/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/shared/package.json packages/shared/package.json
+COPY packages/slack-client/package.json packages/slack-client/package.json
 COPY tools/slack-stub/package.json tools/slack-stub/package.json
 RUN pnpm install --frozen-lockfile
 
