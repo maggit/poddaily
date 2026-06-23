@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { getTeam, listMembers, addMember, setMemberPermissions, removeMember } from "@/lib/teams";
+import { getTeam, listMembers, addMember, setMemberPermissions, removeMember, setMemberAvatar } from "@/lib/teams";
+import { createSlackClient } from "@poddaily/slack-client";
 import { PageHeader } from "@/components/page-header";
 import { MemberTable } from "@/components/teams/member-table";
 import { AddMemberForm } from "@/components/teams/add-member-form";
@@ -18,7 +19,13 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
     const slackDisplayName = String(fd.get("slackDisplayName") ?? "").trim();
     const timezone = String(fd.get("timezone") ?? "UTC");
     if (!slackUserId || !slackDisplayName) throw new Error("User id and display name are required");
-    await addMember(id, { slackUserId, slackDisplayName, timezone, canReport: true, canView: true, canEdit: false });
+    const member = await addMember(id, { slackUserId, slackDisplayName, timezone, canReport: true, canView: true, canEdit: false });
+    try {
+      const profile = await createSlackClient().getUserProfile(slackUserId);
+      if (profile.image) await setMemberAvatar(member.id, profile.image);
+    } catch (err) {
+      console.warn(`[avatar] fetch failed for ${slackUserId}:`, (err as Error).message);
+    }
     revalidatePath(`/teams/${id}`);
   }
   async function setPermAction(fd: FormData) {
@@ -40,7 +47,10 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
     <div className="space-y-6">
       <PageHeader title={team.name} />
       <div className="text-sm text-muted-foreground">#{team.slackChannelName}{team.tribe ? ` · ${team.tribe}` : ""}</div>
-      <Link href={`/teams/${id}/standup`} className="text-[13px] font-medium text-accent hover:underline">Configure standup →</Link>
+      <div className="flex gap-4">
+        <Link href={`/teams/${id}/standup`} className="text-[13px] font-medium text-accent hover:underline">Configure standup →</Link>
+        <Link href={`/reports/${id}`} className="text-[13px] font-medium text-accent hover:underline">View reports →</Link>
+      </div>
       <section className="space-y-3">
         <h2 className="text-[15px] font-medium">Members</h2>
         <MemberTable members={members} setPermAction={setPermAction} removeAction={removeAction} />

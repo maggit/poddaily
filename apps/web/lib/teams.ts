@@ -1,4 +1,4 @@
-import { eq, schema } from "@poddaily/db";
+import { eq, isNull, schema } from "@poddaily/db";
 import type { Team, TeamMember } from "@poddaily/db/schema";
 import { db } from "./db";
 
@@ -38,4 +38,16 @@ export async function setMemberPermissions(memberId: string, perms: {
 
 export async function removeMember(memberId: string): Promise<void> {
   await db.delete(schema.teamMembers).where(eq(schema.teamMembers.id, memberId));
+}
+
+export async function setMemberAvatar(memberId: string, avatarUrl: string): Promise<void> {
+  await db.update(schema.teamMembers).set({ slackAvatarUrl: avatarUrl }).where(eq(schema.teamMembers.id, memberId));
+}
+
+/** Members with no avatar yet — for the one-off backfill. */
+export function listMembersMissingAvatar(): Promise<{ id: string; slackUserId: string }[]> {
+  return db
+    .select({ id: schema.teamMembers.id, slackUserId: schema.teamMembers.slackUserId })
+    .from(schema.teamMembers)
+    .where(isNull(schema.teamMembers.slackAvatarUrl));
 }
