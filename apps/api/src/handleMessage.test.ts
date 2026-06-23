@@ -16,6 +16,7 @@ function fakeSlack() {
     async openDm() { return DM; },
     async postMessage(channel: string, text: string) { posts.push({ channel, text }); return "ts1"; },
     async updateMessage() {},
+    async getUserProfile() { return { image: null, tz: null, realName: null }; },
   };
 }
 
@@ -91,6 +92,7 @@ describe("handleMessage", () => {
       openDm: async () => "D",
       postMessage: async (channel: string, text: string, opts: any = {}) => { posts.push({ channel, text, opts }); return "post_ts_1"; },
       updateMessage: async (channel: string, ts: string, o: any) => { updates.push({ channel, ts, text: o.text }); },
+      getUserProfile: async () => ({ image: null, tz: null, realName: null }),
     };
 
     await handleMessage({ db, slack, secret: SECRET, makeUserSlack }, { slackUserId: USER, channel: DM, text: "answer 1" });
@@ -151,8 +153,8 @@ describe("handleMessage", () => {
     await sql`insert into standup_reports (run_id, slack_user_id, slack_display_name, answers, status, reported_at, created_at) values ((select id from standup_runs where scheduled_date='2026-06-20' and standup_id=(select standup_id from standup_runs where id=${runId}) limit 1), ${USER}, 'HM Tester', ${JSON.stringify([])}, 'completed', '2026-06-20T10:00:00Z', '2026-06-20T10:00:00Z')`;
 
     const posts: Array<{ opts: any }> = [];
-    const slack = { openDm: async () => "D", postMessage: async (_c: string, _t: string, opts: any = {}) => { posts.push({ opts }); return "ts"; }, updateMessage: async () => {} };
-    const makeUserSlackLocal = () => ({ openDm: async () => "D", postMessage: async () => "ts", updateMessage: async () => {} });
+    const slack = { openDm: async () => "D", postMessage: async (_c: string, _t: string, opts: any = {}) => { posts.push({ opts }); return "ts"; }, updateMessage: async () => {}, getUserProfile: async () => ({ image: null, tz: null, realName: null }) };
+    const makeUserSlackLocal = () => ({ openDm: async () => "D", postMessage: async () => "ts", updateMessage: async () => {}, getUserProfile: async () => ({ image: null, tz: null, realName: null }) });
 
     await handleMessage({ db, slack, secret: SECRET, makeUserSlack: makeUserSlackLocal }, { slackUserId: USER, channel: DM, text: "a1" });
     await handleMessage({ db, slack, secret: SECRET, makeUserSlack: makeUserSlackLocal }, { slackUserId: USER, channel: DM, text: "a2" });
@@ -217,11 +219,13 @@ describe("handleMessage", () => {
       openDm: async () => "D",
       postMessage: async (channel: string, _t: string, opts: any = {}) => { botPosts.push({ channel, opts }); return "bot_ts"; },
       updateMessage: async () => {},
+      getUserProfile: async () => ({ image: null, tz: null, realName: null }),
     };
     const makeUserSlackConnected = (token: string) => ({
       openDm: async () => "D",
       postMessage: async (channel: string, _t: string, opts: any = {}) => { userPosts.push({ token, channel, opts }); return "user_ts"; },
       updateMessage: async () => {},
+      getUserProfile: async () => ({ image: null, tz: null, realName: null }),
     });
 
     await handleMessage({ db, slack, secret: SECRET, makeUserSlack: makeUserSlackConnected }, { slackUserId: USER, channel: DM, text: "a1" });
@@ -249,6 +253,7 @@ describe("handleMessage", () => {
       openDm: async () => "D",
       postMessage: async (_c: string, _t: string, opts: any = {}) => { botPosts.push({ opts }); return "bot_ts"; },
       updateMessage: async () => {},
+      getUserProfile: async () => ({ image: null, tz: null, realName: null }),
     };
     const makeUserSlackThrows = () => { throw new Error("should not be called when unconnected"); };
 
@@ -276,12 +281,14 @@ describe("handleMessage", () => {
       openDm: async () => "D",
       postMessage: async (_c: string, _t: string, opts: any = {}) => { botPosts.push({ opts }); return "bot_ts"; },
       updateMessage: async () => {},
+      getUserProfile: async () => ({ image: null, tz: null, realName: null }),
     };
     // user client throws (simulating invalid_auth/token_revoked)
     const makeUserSlackRevoked = () => ({
       openDm: async () => "D",
       postMessage: async () => { throw new Error("invalid_auth"); },
       updateMessage: async () => {},
+      getUserProfile: async () => ({ image: null, tz: null, realName: null }),
     });
 
     await handleMessage({ db, slack, secret: SECRET, makeUserSlack: makeUserSlackRevoked }, { slackUserId: USER, channel: DM, text: "a1" });

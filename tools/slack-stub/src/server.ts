@@ -120,6 +120,20 @@ export function startSlackStub(port = 4010): Promise<SlackStub> {
       return json(200, { ok: true, ts: body.get("ts") ?? "" });
     }
 
+    if (u.pathname === "/api/users.info") {
+      const body = await readBody(req);
+      const user = body.get("user") || "U_STUB";
+      return json(200, {
+        ok: true,
+        user: {
+          id: user,
+          real_name: "Stub User",
+          tz: "America/New_York",
+          profile: { image_192: `https://stub.local/${user}-192.png`, image_512: `https://stub.local/${user}-512.png` },
+        },
+      });
+    }
+
     // --- Test introspection ---
     if (u.pathname === "/__stub/updates") {
       return json(200, updates);

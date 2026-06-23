@@ -24,9 +24,10 @@ Checked items are implemented; unchecked are planned. Updated at the end of each
 - [x] Conversational DM Q&A (one question at a time, skip / skip all, 4h timeout)
 - [x] Channel broadcast posted as the user, threaded under a daily opening message
   - Connected members post via their own Slack user token (true authorship, no "APP" badge, counts as a user message in Slack analytics); unconnected members fall back to a bot post (`chat:write.customize`) with a "Connect" nudge — Step 6a delivered the broadcast/threading, Step 6b the post-as-user
+- [x] Reports dashboard (today + history, per-person check-in feed with Slack avatars) — admin-only
 
-**Phase 2 — Admin UX:** today's dashboard, participation stats, one-click reminders,
-pause/resume.
+**Phase 2 — Admin UX:** today's dashboard ✅ (sub-project A — reports dashboard, shipped),
+participation stats, one-click reminders (B), pause/resume + admin controls (C), RBAC tiers (D).
 **Phase 4 — P1:** analytics, `/standup` slash command, Databricks export webhook, streaks.
 
 See the full [roadmap](#roadmap) and the [PRD](ContextDB/01_specs/poddaily-prd.md) for scope.
@@ -115,6 +116,24 @@ Env: `SLACK_SIGNING_SECRET` (Slack request-signature verification) and `SLACK_BO
 listens on `PORT` (default `3001`); its Slack **Event Subscriptions request URL** is
 `https://<api-domain>/slack/events`, subscribed to the `message.im` bot event.
 
+### Reports dashboard (Phase 2 — sub-project A)
+
+The admin web app exposes a read-only reports view (admin-only). `/reports` shows today's run
+across all teams — participation (`reported/total`) and status — and clicking a team opens
+`/reports/[teamId]`, a feed of per-person check-in cards (Slack avatar + name + status + the
+member's Q&A answers) with a date selector to browse history. Answers render the interpolated
+`{last_report_date}` exactly as the DM and channel broadcast do. It's a Server-Component
+data-access view (`apps/web/lib/reports.ts`) — no REST API.
+
+Avatars come from Slack via `users.info`, so the bot needs the **`users:read`** scope. A
+member's avatar is fetched best-effort when they're added; for members added before this
+shipped, run the one-off backfill once after deploy (needs `SLACK_BOT_TOKEN` on the `web`
+service — already set — and `users:read`):
+
+    pnpm --filter @poddaily/web backfill:avatars
+
+When an avatar is missing the card falls back to the member's initials.
+
 ## Configuration
 
 All configuration is via environment variables; copy `.env.example` to `.env.local`. Each
@@ -161,7 +180,7 @@ the [project map](ContextDB/00_index/project-map.md): specs, architecture, and t
 | Phase | Scope |
 |---|---|
 | 1 — Core ✅ feature-complete | Auth, team CRUD, standup config, Slack DM flow, channel broadcast, scheduler |
-| 2 — Admin UX | Dashboard, participation stats, reminders, pause/resume |
+| 2 — Admin UX | Reports dashboard ✅ (sub-project A), participation stats, reminders (B), pause/resume + admin controls (C), RBAC (D) |
 | 3 — Polish + launch | Deploy, env config, docs, pilot |
 | 4 — P1 features | Analytics, slash command, export webhook, streaks |
 
