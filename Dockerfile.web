@@ -4,8 +4,15 @@ RUN corepack enable
 WORKDIR /app
 
 FROM base AS deps
+# Copy EVERY workspace package.json so the frozen lockfile fully resolves and any web
+# cross-package dependency's transitive deps install. Web's closure is web/db/shared/
+# slack-client/slack-stub, but copying all manifests future-proofs against new workspace
+# deps (the build stage installs a few extras, but the Next standalone runner only bundles
+# what web actually imports, so the final image stays lean). Mirrors Dockerfile.api/worker.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/web/package.json apps/web/package.json
+COPY apps/api/package.json apps/api/package.json
+COPY apps/worker/package.json apps/worker/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/slack-client/package.json packages/slack-client/package.json
