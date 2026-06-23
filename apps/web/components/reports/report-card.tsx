@@ -18,7 +18,7 @@ export function ReportCard({ card }: { card: ReportCardData }) {
         <Avatar src={card.avatarUrl} name={card.displayName} />
         <div className="flex-1">
           <div className="font-medium text-foreground">{card.displayName}</div>
-          {card.reportedAt ? (
+          {card.status === "completed" && card.reportedAt ? (
             <div className="text-xs text-subtle-foreground">{new Date(card.reportedAt).toLocaleString()}</div>
           ) : null}
         </div>
