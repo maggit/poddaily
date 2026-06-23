@@ -148,6 +148,20 @@ covers it end-to-end (one member completes + broadcasts; one times out + is not 
 run ends `completed`). Set `STANDUP_TIMEOUT_MS` small (e.g. `1500`) to exercise the timeout
 path quickly.
 
+### Reports dashboard (Phase 2 — sub-project A)
+
+The admin web app has a read-only reports view. `/reports` shows today's run across all teams
+(participation + status); click a team to open `/reports/[teamId]`, a per-person check-in feed
+(avatar + status + the member's answers) with a date selector to browse history. Avatars come
+from Slack (`users.info`, needs the bot **`users:read`** scope): a member's avatar is fetched
+on member-add, and a one-off backfill populates members added earlier —
+
+```bash
+pnpm --filter @poddaily/web backfill:avatars   # needs SLACK_BOT_TOKEN on web + users:read
+```
+
+Missing avatars fall back to initials.
+
 ---
 
 ## Track B — Live end-to-end (real Supabase + real Slack)
