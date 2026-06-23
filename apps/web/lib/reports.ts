@@ -48,9 +48,16 @@ export interface RunDetail {
 
 /** A team's run for `date` (default = latest), with each can_report member's card. Null = unknown team. */
 export async function getRunDetail(teamId: string, date?: string): Promise<RunDetail | null> {
-  const [team] = await db.select().from(schema.teams).where(eq(schema.teams.id, teamId));
+  const [teamRows, standupRows, members] = await Promise.all([
+    db.select().from(schema.teams).where(eq(schema.teams.id, teamId)),
+    db.select().from(schema.standups).where(eq(schema.standups.teamId, teamId)),
+    db.select().from(schema.teamMembers)
+      .where(and(eq(schema.teamMembers.teamId, teamId), eq(schema.teamMembers.canReport, true)))
+      .orderBy(schema.teamMembers.slackDisplayName),
+  ]);
+  const team = teamRows[0];
+  const standup = standupRows[0];
   if (!team) return null;
-  const [standup] = await db.select().from(schema.standups).where(eq(schema.standups.teamId, teamId));
 
   let run: typeof schema.standupRuns.$inferSelect | undefined;
   if (standup) {
@@ -60,9 +67,6 @@ export async function getRunDetail(teamId: string, date?: string): Promise<RunDe
     [run] = await db.select().from(schema.standupRuns).where(where).orderBy(desc(schema.standupRuns.scheduledDate)).limit(1);
   }
 
-  const members = await db.select().from(schema.teamMembers)
-    .where(and(eq(schema.teamMembers.teamId, teamId), eq(schema.teamMembers.canReport, true)))
-    .orderBy(schema.teamMembers.slackDisplayName);
   const reports = run
     ? await db.select().from(schema.standupReports).where(eq(schema.standupReports.runId, run.id))
     : [];
@@ -97,13 +101,16 @@ export async function getRunDetail(teamId: string, date?: string): Promise<RunDe
 export interface RunDate { date: string; status: string; reported: number; total: number; }
 
 export async function listTeamRunDates(teamId: string, limit = 14): Promise<RunDate[]> {
-  const [standup] = await db.select({ id: schema.standups.id }).from(schema.standups).where(eq(schema.standups.teamId, teamId));
-  if (!standup) return [];
-  const runs = await db.select({ id: schema.standupRuns.id, date: schema.standupRuns.scheduledDate, status: schema.standupRuns.status })
-    .from(schema.standupRuns).where(eq(schema.standupRuns.standupId, standup.id))
-    .orderBy(desc(schema.standupRuns.scheduledDate)).limit(limit);
-  return Promise.all(runs.map(async (r) => {
-    const reps = await db.select({ status: schema.standupReports.status }).from(schema.standupReports).where(eq(schema.standupReports.runId, r.id));
-    return { date: r.date, status: r.status ?? "running", reported: reps.filter((x) => x.status === "completed").length, total: reps.length };
-  }));
+  const rows = await sql<Array<{ date: string; status: string | null; total: number; reported: number }>>`
+    select r.scheduled_date::text as date, r.status,
+           count(rep.id)::int as total,
+           count(rep.id) filter (where rep.status = 'completed')::int as reported
+    from standups s
+    join standup_runs r on r.standup_id = s.id
+    left join standup_reports rep on rep.run_id = r.id
+    where s.team_id = ${teamId}
+    group by r.id, r.scheduled_date, r.status
+    order by r.scheduled_date desc
+    limit ${limit}`;
+  return rows.map((r) => ({ date: r.date, status: r.status ?? "running", reported: r.reported, total: r.total }));
 }

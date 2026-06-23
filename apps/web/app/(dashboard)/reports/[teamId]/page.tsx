@@ -10,9 +10,11 @@ export default async function TeamReportsPage({
 }: { params: Promise<{ teamId: string }>; searchParams: Promise<{ date?: string }> }) {
   const { teamId } = await params;
   const { date } = await searchParams;
-  const detail = await getRunDetail(teamId, date);
+  const [detail, dates] = await Promise.all([
+    getRunDetail(teamId, date),
+    listTeamRunDates(teamId),
+  ]);
   if (!detail) notFound();
-  const dates = await listTeamRunDates(teamId);
   const activeDate = detail.run?.scheduledDate;
 
   return (
