@@ -26,10 +26,22 @@ Plan: [2026-06-23-standup-retrigger.md](../../docs/superpowers/plans/2026-06-23-
   the tz-anchored date (`anchorDate`) so it matches how the worker keys the run. `bullmq` moved
   from a devDep to a runtime **dependency** of the api; `index.ts` creates the `Queue` +
   `enqueueRetrigger` (the api needs `REDIS_URL`).
+- **Hardening (post-review).** Two edge cases from the final code review:
+  - *Retry-safe reset* — the retrigger handler now only (re)opens an **absent or `timed_out`**
+    report; an `in_progress`/`completed` row is left untouched, so a delayed BullMQ retry can't
+    wipe answers the member already typed.
+  - *Team recovery* — when retrigger has to **open** today's run itself (`ensureRunOpen` returns
+    `created: true` — the scheduler was down, or the keyword arrived before the scheduled tick),
+    it fans out the standard send to the **rest of the team** (requester excluded; they get the
+    direct re-DM) via a `fanOutSends` extracted from `openRun`. This refines the original
+    "self-scoped" decision: re-trigger stays self-scoped when the run already exists (the common
+    timed-out case), but recovers the whole team when the run never opened — closing a gap where
+    a keyword before the schedule would otherwise suppress the day's fan-out for everyone else.
+    `openRun`'s scheduled behavior is unchanged (proven by its unit tests + the outbound smoke).
 
 ## Verification
 
-- `pnpm test` — **134 passed / 134** (33 files), 0 failures.
+- `pnpm test` — **137 passed / 137** (33 files), 0 failures.
 - New: `apps/worker/src/openRun.test.ts` (ensureRunOpen case), `apps/worker/src/retrigger.test.ts`
   (reset timed_out → in_progress + run running + Q1 + timeout; absent member; run-not-open),
   `apps/api/src/handleMessage.test.ts` (keyword→enqueue; completed→block, no enqueue;

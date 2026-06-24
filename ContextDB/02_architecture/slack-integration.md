@@ -80,8 +80,12 @@ Flow for one member:
 > **worker** handler (`apps/worker/src/retrigger.ts`) calls `ensureRunOpen` (extracted from
 > `openRun`) to open-or-fetch today's run, resets/creates the member's report to a fresh
 > `in_progress`, sets the run back to `running`, re-sends intro + Q1 to the DM, and schedules a
-> new timeout. Then the normal answer flow completes it and broadcasts once. Self-scoped (DMs only
-> the requester), reuses the `message.im` subscription (no Slack config), and the shared
+> new timeout. Then the normal answer flow completes it and broadcasts once. It's retry-safe (only
+> (re)opens an absent/`timed_out` report, never wiping a started one) and **self-scoped when the run
+> already exists** (the common timed-out case). If it has to *open* today's run itself (the
+> scheduler was down, or the keyword arrived before the scheduled tick), it also fans out the
+> standard send to the **rest of the team** (requester excluded) via `fanOutSends` — otherwise the
+> others would get no standup that day. Reuses the `message.im` subscription (no Slack config); the shared
 > `QUEUE_NAME` + `RetriggerJob` type live in `@poddaily/shared` so the api can enqueue without
 > importing the worker (the api image excludes it). The api therefore needs `REDIS_URL` + `bullmq`.
 
