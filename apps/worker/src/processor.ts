@@ -4,6 +4,8 @@ import { makeEnqueueSend, makeEnqueueTimeout } from "./queue";
 import { openRun } from "./openRun";
 import { sendDm } from "./sendDm";
 import { timeoutReport } from "./timeoutReport";
+import { retrigger } from "./retrigger";
+import type { RetriggerJob } from "@poddaily/shared";
 import type { Db, SendDmJob, TimeoutJob } from "./types";
 
 export interface ProcessorDeps {
@@ -29,6 +31,8 @@ export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<void
       await sendDm({ db, slack, enqueueTimeout }, job.data as SendDmJob);
     } else if (job.name === "timeout-report") {
       await timeoutReport({ db }, job.data as TimeoutJob);
+    } else if (job.name === "retrigger") {
+      await retrigger({ db, slack, enqueueTimeout }, job.data as RetriggerJob);
     } else {
       throw new Error(`[worker] unknown job name: ${job.name}`);
     }
