@@ -32,7 +32,7 @@ export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<void
     } else if (job.name === "timeout-report") {
       await timeoutReport({ db }, job.data as TimeoutJob);
     } else if (job.name === "retrigger") {
-      await retrigger({ db, slack, enqueueTimeout }, job.data as RetriggerJob);
+      await retrigger({ db, slack, enqueueSend, enqueueTimeout }, job.data as RetriggerJob);
     } else {
       throw new Error(`[worker] unknown job name: ${job.name}`);
     }

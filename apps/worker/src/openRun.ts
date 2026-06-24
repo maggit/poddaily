@@ -1,7 +1,7 @@
 import { schema, eq, and } from "@poddaily/db";
 import { anchorDate, isActiveWeekday, computeSendInstant, buildOpeningMessage } from "@poddaily/shared";
 import type { SlackClient } from "@poddaily/slack-client";
-import type { Db, OpenRunDeps } from "./types";
+import type { Db, EnqueueSend, OpenRunDeps } from "./types";
 
 export interface OpenRunResult {
   runId: string | null;
@@ -80,25 +80,40 @@ export async function openRun(deps: OpenRunDeps, standupId: string, now: Date): 
   const { run, created } = await ensureRunOpen({ db, slack }, standup, now);
   if (!created) return { runId: null, enqueued: 0 }; // already open today — don't re-fan-out
 
-  const date = run.scheduledDate;
-  const members = await db
-    .select()
-    .from(schema.teamMembers)
-    .where(and(eq(schema.teamMembers.teamId, standup.teamId), eq(schema.teamMembers.canReport, true)));
-
   // At-least-once fan-out: the run row is committed before this loop, so if an
   // enqueue throws partway (e.g. Redis down) the run is left in "running" and the
   // remaining members aren't enqueued. Recovery (complete-run + timeout sweeper)
   // is Step 7; send-standup-dm itself is idempotent on (run_id, slack_user_id).
+  const enqueued = await fanOutSends({ db, enqueueSend }, standup, run, now);
+  return { runId: run.id, enqueued };
+}
+
+/**
+ * Enqueue a send-standup-dm per reporting member of the standup's team (optionally excluding
+ * one user — e.g. a re-trigger requester who's DMed directly). Each send is delayed to the
+ * member's own tz-anchored send instant. Returns the number enqueued.
+ */
+export async function fanOutSends(
+  deps: { db: Db; enqueueSend: EnqueueSend },
+  standup: typeof schema.standups.$inferSelect,
+  run: typeof schema.standupRuns.$inferSelect,
+  now: Date,
+  opts: { excludeUserId?: string } = {},
+): Promise<number> {
+  if (!standup.teamId) return 0;
+  const members = await deps.db.select().from(schema.teamMembers)
+    .where(and(eq(schema.teamMembers.teamId, standup.teamId), eq(schema.teamMembers.canReport, true)));
+  let enqueued = 0;
   for (const m of members) {
+    if (opts.excludeUserId && m.slackUserId === opts.excludeUserId) continue;
     const tz = m.timezone ?? standup.scheduleTz;
-    const sendAt = computeSendInstant(standup.scheduleCron, tz, date);
+    const sendAt = computeSendInstant(standup.scheduleCron, tz, run.scheduledDate);
     const delayMs = Math.max(0, sendAt.getTime() - now.getTime());
-    await enqueueSend(
-      { runId: run.id, standupId, slackUserId: m.slackUserId, slackDisplayName: m.slackDisplayName },
+    await deps.enqueueSend(
+      { runId: run.id, standupId: standup.id, slackUserId: m.slackUserId, slackDisplayName: m.slackDisplayName },
       { delayMs },
     );
+    enqueued++;
   }
-
-  return { runId: run.id, enqueued: members.length };
+  return enqueued;
 }

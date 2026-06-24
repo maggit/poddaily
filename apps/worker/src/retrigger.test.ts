@@ -21,6 +21,11 @@ function fakeEnqueueTimeout() {
   const fn = async (job: { runId: string; slackUserId: string }) => { calls.push(job); };
   return Object.assign(fn, { calls });
 }
+function fakeEnqueueSend() {
+  const calls: Array<{ slackUserId: string }> = [];
+  const fn = async (job: { slackUserId: string }) => { calls.push({ slackUserId: job.slackUserId }); };
+  return Object.assign(fn, { calls });
+}
 
 async function cleanup() {
   await sql`delete from standup_reports where slack_user_id = ${USER}`;
@@ -50,7 +55,8 @@ describe("retrigger", () => {
     const runId = maybeRunId!; // the timed_out-report path always creates a run
     const slack = fakeSlack();
     const enqueueTimeout = fakeEnqueueTimeout();
-    await retrigger({ db, slack, enqueueTimeout }, { standupId, slackUserId: USER, slackDisplayName: "RT Tester", channel: "D_RT" });
+    const enqueueSend = fakeEnqueueSend();
+    await retrigger({ db, slack, enqueueSend, enqueueTimeout }, { standupId, slackUserId: USER, slackDisplayName: "RT Tester", channel: "D_RT" });
     const [r] = await sql`select status, reported_at from standup_reports where slack_user_id = ${USER}`;
     expect(r.status).toBe("in_progress");
     expect(r.reported_at).toBeNull(); // reset clears the completed/timed-out timestamp
@@ -65,10 +71,60 @@ describe("retrigger", () => {
     const { standupId } = await seed({ run: "no-run" });
     const slack = fakeSlack();
     const enqueueTimeout = fakeEnqueueTimeout();
-    await retrigger({ db, slack, enqueueTimeout }, { standupId, slackUserId: USER, slackDisplayName: "RT Tester", channel: "D_RT" });
+    const enqueueSend = fakeEnqueueSend();
+    await retrigger({ db, slack, enqueueSend, enqueueTimeout }, { standupId, slackUserId: USER, slackDisplayName: "RT Tester", channel: "D_RT" });
     const [run] = await sql`select status from standup_runs where standup_id = ${standupId} and scheduled_date = current_date`;
     expect(run.status).toBe("running");
     const [r] = await sql`select status from standup_reports where slack_user_id = ${USER}`;
     expect(r.status).toBe("in_progress");
+  });
+
+  it("no-ops (no wipe, no re-DM) when the report is already in_progress — a delayed retry", async () => {
+    const { standupId, runId } = await seed({ report: "timed_out" }); // creates run + timed_out report
+    // simulate the member already mid-answer: in_progress with one answer
+    await sql`update standup_reports set status = 'in_progress', answers = ${JSON.stringify([{ questionId: "q1", questionText: "What did you do?", answer: "already typed this" }])} where slack_user_id = ${USER}`;
+    const slack = fakeSlack();
+    const enqueueTimeout = fakeEnqueueTimeout();
+    const enqueueSend = fakeEnqueueSend();
+    await retrigger({ db, slack, enqueueSend, enqueueTimeout }, { standupId, slackUserId: USER, slackDisplayName: "RT Tester", channel: "D_RT" });
+    const [r] = await sql`select status, answers from standup_reports where slack_user_id = ${USER}`;
+    expect(r.status).toBe("in_progress");
+    expect(r.answers).toHaveLength(1); // NOT wiped
+    expect(slack.posts).toHaveLength(0); // no re-DM
+    expect(enqueueTimeout.calls).toHaveLength(0);
+    void runId;
+  });
+
+  it("fans out the whole team (excluding the requester) when it opens a run the scheduler hadn't", async () => {
+    const { standupId } = await seed({ run: "no-run" }); // standup + requester member, NO run
+    // add a second reporting member who should receive the team fan-out
+    const [team] = await sql`select id from teams where slack_channel_id = ${CHAN}`;
+    await sql`insert into team_members (team_id, slack_user_id, slack_display_name, timezone, can_report) values (${team.id}, 'U_RETRIG_2', 'RT Two', 'UTC', true)`;
+    const slack = fakeSlack();
+    const enqueueTimeout = fakeEnqueueTimeout();
+    const enqueueSend = fakeEnqueueSend();
+    await retrigger({ db, slack, enqueueSend, enqueueTimeout }, { standupId, slackUserId: USER, slackDisplayName: "RT Tester", channel: "D_RT" });
+    // requester recovered directly
+    const [r] = await sql`select status from standup_reports where slack_user_id = ${USER}`;
+    expect(r.status).toBe("in_progress");
+    // the OTHER member was fanned out a send-dm; the requester was NOT (gets the direct re-DM)
+    expect(enqueueSend.calls.map((c) => c.slackUserId)).toEqual(["U_RETRIG_2"]);
+    await sql`delete from team_members where slack_user_id = 'U_RETRIG_2'`;
+    await sql`delete from standup_reports where slack_user_id = 'U_RETRIG_2'`;
+  });
+
+  it("stays self-scoped (no team fan-out) when today's run already exists", async () => {
+    const { standupId } = await seed({ report: "timed_out" }); // run already exists + requester timed_out
+    const [team] = await sql`select id from teams where slack_channel_id = ${CHAN}`;
+    await sql`insert into team_members (team_id, slack_user_id, slack_display_name, timezone, can_report) values (${team.id}, 'U_RETRIG_2', 'RT Two', 'UTC', true)`;
+    const slack = fakeSlack();
+    const enqueueTimeout = fakeEnqueueTimeout();
+    const enqueueSend = fakeEnqueueSend();
+    await retrigger({ db, slack, enqueueSend, enqueueTimeout }, { standupId, slackUserId: USER, slackDisplayName: "RT Tester", channel: "D_RT" });
+    expect(enqueueSend.calls).toHaveLength(0); // run existed → no team fan-out
+    const [r] = await sql`select status from standup_reports where slack_user_id = ${USER}`;
+    expect(r.status).toBe("in_progress");
+    await sql`delete from team_members where slack_user_id = 'U_RETRIG_2'`;
+    await sql`delete from standup_reports where slack_user_id = 'U_RETRIG_2'`;
   });
 });
