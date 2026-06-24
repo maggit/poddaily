@@ -1,7 +1,8 @@
 import { Queue } from "bullmq";
+import { QUEUE_NAME } from "@poddaily/shared";
 import type { SendDmJob, EnqueueSend, TimeoutJob, EnqueueTimeout } from "./types";
 
-export const QUEUE_NAME = "standup";
+export { QUEUE_NAME };
 
 /** BullMQ connection options derived from REDIS_URL. */
 export function redisConnection() {
