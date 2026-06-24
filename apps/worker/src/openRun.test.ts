@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
-import { createDb } from "@poddaily/db";
+import { createDb, schema, eq } from "@poddaily/db";
 import { cronFromWeekly } from "@poddaily/shared";
-import { openRun } from "./openRun";
+import { openRun, ensureRunOpen } from "./openRun";
 import type { SendDmJob } from "./types";
 
 const { db, sql } = createDb();
@@ -106,5 +106,22 @@ describe("openRun", () => {
     const r = await openRun({ db, enqueueSend: async (j) => { enq.push(j); }, slack }, standupId, now);
     expect(r.runId).toBeNull();
     expect(enq).toHaveLength(0);
+  });
+
+  it("ensureRunOpen opens a run with an opening message and returns the existing run on a second call", async () => {
+    const standupId = await seedStandup();
+    const [standupRow] = await db.select().from(schema.standups).where(eq(schema.standups.id, standupId));
+    const now = new Date("2026-06-17T00:05:00Z"); // Wednesday
+    const slack = fakeSlack();
+
+    const first = await ensureRunOpen({ db, slack }, standupRow, now);
+    expect(first.created).toBe(true);
+    expect(first.run.id).toBeTruthy();
+    // opening message posted on first open (buildOpeningMessage text mentions the reported/total count)
+    expect(slack.posts.length).toBeGreaterThan(0);
+
+    const second = await ensureRunOpen({ db, slack }, standupRow, now);
+    expect(second.created).toBe(false);
+    expect(second.run.id).toBe(first.run.id); // same run, not a duplicate
   });
 });
