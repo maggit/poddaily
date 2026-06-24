@@ -16,7 +16,8 @@
     "smoke:config": "vitest run apps/web/tests/config-smoke.test.ts apps/web/lib/standups.test.ts packages/shared/src/schedule.test.ts",
     "smoke:standup-outbound": "vitest run apps/worker/tests/standup-outbound-smoke.test.ts",
     "smoke:standup": "vitest run apps/api/tests/standup-smoke.test.ts packages/shared/src/dmEngine.test.ts apps/api/src/handleMessage.test.ts",
-    "smoke:edges": "vitest run apps/api/tests/edges-smoke.test.ts packages/db/src/runs.test.ts apps/worker/src/timeoutReport.test.ts"
+    "smoke:edges": "vitest run apps/api/tests/edges-smoke.test.ts packages/db/src/runs.test.ts apps/worker/src/timeoutReport.test.ts",
+    "smoke:retrigger": "vitest run apps/api/tests/retrigger-smoke.test.ts apps/worker/src/retrigger.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22",
