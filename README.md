@@ -25,6 +25,7 @@ Checked items are implemented; unchecked are planned. Updated at the end of each
 - [x] Channel broadcast posted as the user, threaded under a daily opening message
   - Connected members post via their own Slack user token (true authorship, no "APP" badge, counts as a user message in Slack analytics); unconnected members fall back to a bot post (`chat:write.customize`) with a "Connect" nudge — Step 6a delivered the broadcast/threading, Step 6b the post-as-user
 - [x] Reports dashboard (today + history, per-person check-in feed with Slack avatars) — admin-only
+- [x] Re-trigger a missed/timed-out standup via a DM keyword (`redo` / `restart` / `start` / `standup`)
 
 **Phase 2 — Admin UX:** today's dashboard ✅ (sub-project A — reports dashboard, shipped),
 participation stats, one-click reminders (B), pause/resume + admin controls (C), RBAC tiers (D).
@@ -115,6 +116,18 @@ the member gets a Slack DM confirmation ("✅ You're connected!"), so the **`web
 Env: `SLACK_SIGNING_SECRET` (Slack request-signature verification) and `SLACK_BOT_TOKEN`. It
 listens on `PORT` (default `3001`); its Slack **Event Subscriptions request URL** is
 `https://<api-domain>/slack/events`, subscribed to the `message.im` bot event.
+
+### Re-trigger a missed standup (DM keyword)
+
+If a member missed their standup for the day (it timed out, or the server was down when it
+should have run), they can re-start it themselves by DMing the bot one of the keywords
+**`redo`**, **`restart`**, **`start`**, or **`standup`** (the whole message, case-insensitive).
+The bot re-opens today's run if needed, re-asks the questions in the DM, and posts to the
+channel on completion as usual. If they've already reported today, the bot replies
+"You've already reported today ✅" and does nothing. This reuses the existing `message.im`
+subscription — **no Slack app config change** — but the **`api` service now needs `REDIS_URL`**
+(it enqueues a `retrigger` job that the worker handles); `bullmq` is a runtime dependency of the
+api.
 
 ### Reports dashboard (Phase 2 — sub-project A)
 

@@ -17,6 +17,7 @@ const USER_B = "U_EDGES_B";
 const DM = "D_EDGES";
 const SECRET = "test-internal-api-secret-0123456789";
 const makeUserSlack = (token: string) => createSlackClient({ token });
+const enqueueRetrigger = async () => {};
 const CRON = cronFromWeekly({ weekdays: [0, 1, 2, 3, 4, 5, 6], hour: 0, minute: 0 });
 
 let stub: SlackStub;

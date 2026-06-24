@@ -1,6 +1,6 @@
 import { schema, eq, and, desc, getUserToken, finalizeRunIfDone, lastReportDateBefore } from "@poddaily/db";
-import { advanceReport, buildOpeningMessage, buildReportBlocks, interpolateLastReportDate } from "@poddaily/shared";
-import type { ReportAnswer } from "@poddaily/shared";
+import { advanceReport, anchorDate, buildOpeningMessage, buildReportBlocks, interpolateLastReportDate } from "@poddaily/shared";
+import type { ReportAnswer, RetriggerJob } from "@poddaily/shared";
 import type { SlackClient } from "@poddaily/slack-client";
 import type { createDb } from "@poddaily/db";
 
@@ -11,6 +11,7 @@ export interface HandleMessageDeps {
   slack: SlackClient;
   secret: string;
   makeUserSlack: (token: string) => SlackClient;
+  enqueueRetrigger: (job: RetriggerJob) => Promise<void>;
 }
 
 /** One inbound DM reply from a member. */
@@ -44,7 +45,10 @@ export async function handleMessage(deps: HandleMessageDeps, msg: IncomingDm): P
     .limit(1);
   // Concurrent distinct messages from the same user are last-write-wins. Acceptable at
   // human typing cadence; the reducer's purity guards redelivery, not concurrency.
-  if (!report || !report.runId) return; // no open report — ignore stray DM
+  if (!report || !report.runId) {
+    await maybeRetrigger(deps, msg);
+    return;
+  }
 
   const [run] = await db.select().from(schema.standupRuns).where(eq(schema.standupRuns.id, report.runId));
   if (!run || !run.standupId) return;
@@ -196,4 +200,53 @@ async function broadcastReport(
   } catch (err) {
     console.warn(`[broadcast] degraded for report ${report.id}:`, (err as Error).message);
   }
+}
+
+const RETRIGGER_KEYWORDS = new Set(["redo", "restart", "start", "standup"]);
+
+/**
+ * When a member with no open report DMs a re-trigger keyword, (re)start their standup for
+ * today — unless they've already completed it. No-op for non-keyword messages.
+ */
+async function maybeRetrigger(deps: HandleMessageDeps, msg: IncomingDm): Promise<void> {
+  const { db, slack, enqueueRetrigger } = deps;
+  if (!RETRIGGER_KEYWORDS.has(msg.text.trim().toLowerCase())) return;
+
+  const [member] = await db
+    .select({ teamId: schema.teamMembers.teamId, displayName: schema.teamMembers.slackDisplayName })
+    .from(schema.teamMembers)
+    .where(eq(schema.teamMembers.slackUserId, msg.slackUserId))
+    .limit(1);
+  if (!member?.teamId) {
+    await slack.postMessage(msg.channel, "You're not set up for a standup yet.");
+    return;
+  }
+  const [standup] = await db
+    .select({ id: schema.standups.id, scheduleTz: schema.standups.scheduleTz })
+    .from(schema.standups)
+    .where(eq(schema.standups.teamId, member.teamId));
+  if (!standup) {
+    await slack.postMessage(msg.channel, "Your team has no standup configured yet.");
+    return;
+  }
+
+  // Already completed today? Block. "today" is the run's tz-anchored date (matches the worker).
+  const todayDate = anchorDate(standup.scheduleTz, new Date());
+  const [todayRun] = await db
+    .select({ id: schema.standupRuns.id })
+    .from(schema.standupRuns)
+    .where(and(eq(schema.standupRuns.standupId, standup.id), eq(schema.standupRuns.scheduledDate, todayDate)));
+  if (todayRun) {
+    const [rep] = await db
+      .select({ status: schema.standupReports.status })
+      .from(schema.standupReports)
+      .where(and(eq(schema.standupReports.runId, todayRun.id), eq(schema.standupReports.slackUserId, msg.slackUserId)));
+    if (rep?.status === "completed") {
+      await slack.postMessage(msg.channel, "You've already reported today ✅");
+      return;
+    }
+  }
+
+  await enqueueRetrigger({ standupId: standup.id, slackUserId: msg.slackUserId, slackDisplayName: member.displayName, channel: msg.channel });
+  await slack.postMessage(msg.channel, "📋 Restarting your standup…");
 }
