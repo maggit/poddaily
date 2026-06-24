@@ -71,6 +71,20 @@ Flow for one member:
 3. Idempotency: because progress is derived from stored `answers`, a duplicated/redelivered
    event maps to the same question index and does not double-advance.
 
+### Re-trigger (DM keyword)
+
+> **Status — implemented (Phase 2 follow-on).** When a member with **no open report** DMs a
+> keyword (`redo` / `restart` / `start` / `standup`, whole-message match), `handleMessage`'s
+> `maybeRetrigger` resolves their standup and — unless they've already `completed` today (then it
+> replies "already reported") — enqueues a `retrigger` BullMQ job and acks "Restarting…". The
+> **worker** handler (`apps/worker/src/retrigger.ts`) calls `ensureRunOpen` (extracted from
+> `openRun`) to open-or-fetch today's run, resets/creates the member's report to a fresh
+> `in_progress`, sets the run back to `running`, re-sends intro + Q1 to the DM, and schedules a
+> new timeout. Then the normal answer flow completes it and broadcasts once. Self-scoped (DMs only
+> the requester), reuses the `message.im` subscription (no Slack config), and the shared
+> `QUEUE_NAME` + `RetriggerJob` type live in `@poddaily/shared` so the api can enqueue without
+> importing the worker (the api image excludes it). The api therefore needs `REDIS_URL` + `bullmq`.
+
 ## Channel broadcast
 
 > **Status — implemented in Step 6a.** The worker posts the opening message at run-open (with a
