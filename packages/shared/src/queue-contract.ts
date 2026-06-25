@@ -19,3 +19,12 @@ export interface SendDmJob {
   slackUserId: string;
   slackDisplayName: string;
 }
+
+/** BullMQ job name for a reminder nudge. */
+export const REMINDER_JOB = "reminder";
+
+/** Payload for a reminder job — nudge a member who hasn't finished today's run. */
+export interface ReminderJob {
+  runId: string;
+  slackUserId: string;
+}
