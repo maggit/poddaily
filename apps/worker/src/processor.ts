@@ -6,6 +6,7 @@ import { sendDm } from "./sendDm";
 import { timeoutReport } from "./timeoutReport";
 import { retrigger } from "./retrigger";
 import type { RetriggerJob } from "@poddaily/shared";
+import { SEND_DM_JOB } from "@poddaily/shared";
 import type { Db, SendDmJob, TimeoutJob } from "./types";
 
 export interface ProcessorDeps {
@@ -27,7 +28,7 @@ export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<void
     if (job.name === "open-run") {
       const { standupId } = job.data as { standupId: string };
       await openRun({ db, enqueueSend, slack }, standupId, new Date());
-    } else if (job.name === "send-dm") {
+    } else if (job.name === SEND_DM_JOB) {
       await sendDm({ db, slack, enqueueTimeout }, job.data as SendDmJob);
     } else if (job.name === "timeout-report") {
       await timeoutReport({ db }, job.data as TimeoutJob);

@@ -158,6 +158,12 @@ When an avatar is missing the card falls back to the member's initials.
 - **Slack-connected badge.** The team detail page's member table shows, per member, whether they
   have connected their reporter user-OAuth token (**Connected** vs **Not connected**) — i.e.
   whether their reports post as themselves vs. the bot fallback.
+- **Late-join delivery.** Adding a member — or flipping an existing member's **Report** permission
+  on — mid-day delivers **today's** standup to them if the run is already open (otherwise the
+  normal schedule / next scheduled day applies; a finalized run still counts — their report
+  appends to today's thread). For this catch-up to fire, the **`web` service needs `REDIS_URL`**
+  set (and `bullmq` is a `web` dependency) — it enqueues a `send-dm` job that the worker handles.
+  Without `REDIS_URL` the member is still added; they just don't get the same-day DM.
 
 ## Configuration
 

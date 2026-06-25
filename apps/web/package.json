@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
+    "bullmq": "^5.34.0",
     "@poddaily/db": "workspace:*",
     "@poddaily/shared": "workspace:*",
     "@poddaily/slack-client": "workspace:*",
