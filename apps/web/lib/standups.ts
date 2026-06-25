@@ -35,3 +35,11 @@ export async function upsertStandup(teamId: string, config: StandupConfig): Prom
     .returning();
   return s;
 }
+
+/** Pause (active=false) or resume (active=true) a team's standup. Future-only: openRun bails on !is_active. */
+export async function setStandupActive(teamId: string, active: boolean): Promise<void> {
+  await db
+    .update(schema.standups)
+    .set({ isActive: active, updatedAt: new Date() })
+    .where(eq(schema.standups.teamId, teamId));
+}

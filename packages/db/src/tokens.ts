@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { encryptToken, decryptToken } from "@poddaily/shared";
 import * as schema from "./schema";
 import type { createDb } from "./client";
@@ -37,4 +37,14 @@ export async function hasUserToken(db: Db, slackUserId: string): Promise<boolean
     .from(schema.slackUserTokens)
     .where(eq(schema.slackUserTokens.slackUserId, slackUserId));
   return Boolean(row);
+}
+
+/** Which of the given users have connected (existence only, no decryption) — batch sibling of hasUserToken. */
+export async function listConnectedUserIds(db: Db, slackUserIds: string[]): Promise<string[]> {
+  if (slackUserIds.length === 0) return [];
+  const rows = await db
+    .select({ slackUserId: schema.slackUserTokens.slackUserId })
+    .from(schema.slackUserTokens)
+    .where(inArray(schema.slackUserTokens.slackUserId, slackUserIds));
+  return rows.map((r) => r.slackUserId);
 }

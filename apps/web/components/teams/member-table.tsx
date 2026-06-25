@@ -1,18 +1,21 @@
 import { DataTable, Th, Td } from "@/components/ui/data-table";
+import { StatusPill } from "@/components/ui/status-pill";
 import type { TeamMember } from "@poddaily/db/schema";
 
 export function MemberTable({
-  members, setPermAction, removeAction,
+  members, connectedUserIds, setPermAction, removeAction,
 }: {
   members: TeamMember[];
+  connectedUserIds: string[];
   setPermAction: (fd: FormData) => void | Promise<void>;
   removeAction: (fd: FormData) => void | Promise<void>;
 }) {
+  const connected = new Set(connectedUserIds);
   if (members.length === 0) {
     return <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">No members yet. Add one below.</div>;
   }
   return (
-    <DataTable head={<><Th>Member</Th><Th>Timezone</Th><Th className="text-center">View</Th><Th className="text-center">Report</Th><Th className="text-center">Edit</Th><Th /></>}>
+    <DataTable head={<><Th>Member</Th><Th>Timezone</Th><Th className="text-center">View</Th><Th className="text-center">Report</Th><Th className="text-center">Edit</Th><Th>Slack</Th><Th /></>}>
       {members.map((m) => (
         <tr key={m.id} className="hover:bg-surface-muted">
           <Td><span className="font-medium text-foreground">{m.slackDisplayName}</span> <span className="text-subtle-foreground">{m.slackUserId}</span></Td>
@@ -28,6 +31,11 @@ export function MemberTable({
               </form>
             </Td>
           ))}
+          <Td>
+            {connected.has(m.slackUserId)
+              ? <StatusPill tone="success">Connected</StatusPill>
+              : <StatusPill tone="neutral">Not connected</StatusPill>}
+          </Td>
           <Td className="text-right">
             <form action={removeAction} className="inline">
               <input type="hidden" name="memberId" value={m.id} />

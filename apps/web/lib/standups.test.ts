@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll } from "vitest";
-import { getStandup, upsertStandup } from "./standups";
+import { getStandup, upsertStandup, setStandupActive } from "./standups";
 import { createTeam } from "./teams";
 import { sql } from "./db";
 import { DEFAULT_QUESTIONS } from "@poddaily/shared";
@@ -48,5 +48,14 @@ describe("standup data access", () => {
     expect((got?.questions as unknown[]).length).toBe(1);
     const [{ count }] = await sql`select count(*)::int as count from standups where team_id = ${teamId}`;
     expect(count).toBe(1);
+  });
+
+  it("setStandupActive pauses and resumes the standup (is_active)", async () => {
+    await setStandupActive(teamId, false);
+    let [row] = await sql`select is_active from standups where team_id = ${teamId}`;
+    expect(row.is_active).toBe(false);
+    await setStandupActive(teamId, true);
+    [row] = await sql`select is_active from standups where team_id = ${teamId}`;
+    expect(row.is_active).toBe(true);
   });
 });

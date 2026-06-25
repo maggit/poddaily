@@ -1,8 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getTeam } from "@/lib/teams";
-import { getStandup, upsertStandup } from "@/lib/standups";
+import { getStandup, upsertStandup, setStandupActive } from "@/lib/standups";
 import { PageHeader } from "@/components/page-header";
+import { StatusPill } from "@/components/ui/status-pill";
 import { StandupForm } from "@/components/standups/standup-form";
 import { DEFAULT_QUESTIONS, cronFromWeekly, parseWeeklyCron, type Question } from "@poddaily/shared";
 
@@ -40,9 +41,29 @@ export default async function StandupConfigPage({ params }: { params: Promise<{ 
     redirect(`/teams/${id}`);
   }
 
+  async function toggleActiveAction() {
+    "use server";
+    const current = await getStandup(id);
+    if (!current) return;
+    await setStandupActive(id, !current.isActive);
+    revalidatePath(`/teams/${id}/standup`);
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader title={`${team.name} · Standup`} />
+      {standup ? (
+        <div className="flex items-center gap-3">
+          <StatusPill tone={standup.isActive === false ? "neutral" : "success"}>
+            {standup.isActive === false ? "Paused" : "Active"}
+          </StatusPill>
+          <form action={toggleActiveAction}>
+            <button type="submit" className="text-[13px] font-medium text-accent hover:underline">
+              {standup.isActive === false ? "Resume standup" : "Pause standup"}
+            </button>
+          </form>
+        </div>
+      ) : null}
       <StandupForm
         action={saveAction}
         questions={questions}

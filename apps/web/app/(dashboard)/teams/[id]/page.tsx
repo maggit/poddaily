@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { getTeam, listMembers, addMember, setMemberPermissions, removeMember, setMemberAvatar } from "@/lib/teams";
+import { listConnectedUserIds } from "@poddaily/db";
+import { db } from "@/lib/db";
 import { createSlackClient } from "@poddaily/slack-client";
 import { PageHeader } from "@/components/page-header";
 import { MemberTable } from "@/components/teams/member-table";
@@ -12,6 +14,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
   const team = await getTeam(id);
   if (!team) notFound();
   const members = await listMembers(id);
+  const connectedUserIds = await listConnectedUserIds(db, members.map((m) => m.slackUserId));
 
   async function addMemberAction(fd: FormData) {
     "use server";
@@ -53,7 +56,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
       </div>
       <section className="space-y-3">
         <h2 className="text-[15px] font-medium">Members</h2>
-        <MemberTable members={members} setPermAction={setPermAction} removeAction={removeAction} />
+        <MemberTable members={members} connectedUserIds={connectedUserIds} setPermAction={setPermAction} removeAction={removeAction} />
         <AddMemberForm action={addMemberAction} />
       </section>
     </div>
