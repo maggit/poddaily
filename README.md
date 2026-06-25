@@ -147,6 +147,18 @@ service — already set — and `users:read`):
 
 When an avatar is missing the card falls back to the member's initials.
 
+### Admin controls (Phase 2 — sub-project C)
+
+- **Pause / resume a standup.** Each standup's config page (`/teams/[id]/standup`) shows an
+  **Active / Paused** pill and a Pause/Resume button. Pausing flips `standups.is_active` — it's
+  **future-only**: a run already open for today (and its in-progress reports) finishes, but no
+  new run is sent. It takes effect at the very next scheduled tick (the worker's `open-run`
+  no-ops on a paused standup), and the standup's repeatable schedule job is cleaned up on the
+  next worker reconcile/boot. A paused standup also can't be re-triggered by the DM keyword.
+- **Slack-connected badge.** The team detail page's member table shows, per member, whether they
+  have connected their reporter user-OAuth token (**Connected** vs **Not connected**) — i.e.
+  whether their reports post as themselves vs. the bot fallback.
+
 ## Configuration
 
 All configuration is via environment variables; copy `.env.example` to `.env.local`. Each
