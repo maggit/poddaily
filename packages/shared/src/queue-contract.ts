@@ -8,3 +8,14 @@ export interface RetriggerJob {
   slackDisplayName: string;
   channel: string; // the DM channel to ack into (unused by the worker, carried for completeness)
 }
+
+/** BullMQ job name for a per-member send-standup-dm job. */
+export const SEND_DM_JOB = "send-dm";
+
+/** Payload for a per-member send-standup-dm job. */
+export interface SendDmJob {
+  runId: string;
+  standupId: string;
+  slackUserId: string;
+  slackDisplayName: string;
+}

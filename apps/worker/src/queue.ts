@@ -1,5 +1,5 @@
 import { Queue } from "bullmq";
-import { QUEUE_NAME } from "@poddaily/shared";
+import { QUEUE_NAME, SEND_DM_JOB } from "@poddaily/shared";
 import type { SendDmJob, EnqueueSend, TimeoutJob, EnqueueTimeout } from "./types";
 
 export { QUEUE_NAME };
@@ -18,7 +18,7 @@ export function createQueue(): Queue {
 /** An EnqueueSend backed by a real BullMQ queue. */
 export function makeEnqueueSend(queue: Queue): EnqueueSend {
   return async (job: SendDmJob, opts: { delayMs: number }) => {
-    await queue.add("send-dm", job, {
+    await queue.add(SEND_DM_JOB, job, {
       delay: opts.delayMs,
       attempts: 3,
       backoff: { type: "exponential", delay: 30_000 },
