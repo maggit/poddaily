@@ -5,6 +5,7 @@ import { getTeam, listMembers, addMember, setMemberPermissions, removeMember, se
 import { listConnectedUserIds } from "@poddaily/db";
 import { db } from "@/lib/db";
 import { createSlackClient } from "@poddaily/slack-client";
+import { enqueueLateJoinIfOpen } from "@/lib/late-join";
 import { PageHeader } from "@/components/page-header";
 import { MemberTable } from "@/components/teams/member-table";
 import { AddMemberForm } from "@/components/teams/add-member-form";
@@ -29,15 +30,26 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
     } catch (err) {
       console.warn(`[avatar] fetch failed for ${slackUserId}:`, (err as Error).message);
     }
+    try {
+      await enqueueLateJoinIfOpen(member.id);
+    } catch (err) {
+      console.warn(`[late-join] enqueue failed for ${member.id}:`, (err as Error).message);
+    }
     revalidatePath(`/teams/${id}`);
   }
   async function setPermAction(fd: FormData) {
     "use server";
-    await setMemberPermissions(String(fd.get("memberId")), {
+    const memberId = String(fd.get("memberId"));
+    await setMemberPermissions(memberId, {
       canView: fd.get("canView") === "true",
       canReport: fd.get("canReport") === "true",
       canEdit: fd.get("canEdit") === "true",
     });
+    try {
+      await enqueueLateJoinIfOpen(memberId);
+    } catch (err) {
+      console.warn(`[late-join] enqueue failed for ${memberId}:`, (err as Error).message);
+    }
     revalidatePath(`/teams/${id}`);
   }
   async function removeAction(fd: FormData) {
