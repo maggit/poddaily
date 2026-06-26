@@ -18,6 +18,11 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      // Test files are type-checked (tsc) + run (vitest) but not lint-gated in the
+      // production build — they legitimately use loose types for fakes/spies, like the
+      // worker/api tests the web build never lints. Keeps `next build` from failing on them.
+      "**/*.test.ts",
+      "**/*.test.tsx",
     ],
   },
 ];
