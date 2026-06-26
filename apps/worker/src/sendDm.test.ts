@@ -25,6 +25,12 @@ function makeEnqueueTimeoutRecorder() {
   return Object.assign(fn, { calls });
 }
 
+function makeEnqueueRemindersRecorder() {
+  const calls: Array<{ job: { runId: string; slackUserId: string }; intervalMs: number; timeoutMs: number }> = [];
+  const fn = async (job: { runId: string; slackUserId: string }, opts: { intervalMs: number; timeoutMs: number }) => { calls.push({ job, intervalMs: opts.intervalMs, timeoutMs: opts.timeoutMs }); };
+  return Object.assign(fn, { calls });
+}
+
 async function seedRun(intro: string | null) {
   const [team] = await sql`insert into teams (name, slack_channel_id, slack_channel_name) values ('SendDm Pod', ${CHAN}, 'senddm-pod') returning id`;
   const [s] = await sql`
@@ -55,7 +61,7 @@ describe("sendDm", () => {
     const { standupId, runId } = await seedRun("Good morning! :wave:");
     const slack = createSlackClient({ token: "xoxb-test", baseUrl: stub.url });
 
-    await sendDm({ db, slack, enqueueTimeout: makeEnqueueTimeoutRecorder() }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
+    await sendDm({ db, slack, enqueueTimeout: makeEnqueueTimeoutRecorder(), enqueueReminders: makeEnqueueRemindersRecorder() }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
 
     const log = await (await fetch(`${stub.url}/__stub/messages`)).json();
     expect(log).toHaveLength(2); // intro + Q1
@@ -73,7 +79,7 @@ describe("sendDm", () => {
   it("skips the intro post when introMessage is null (Q1 only)", async () => {
     const { standupId, runId } = await seedRun(null);
     const slack = createSlackClient({ token: "xoxb-test", baseUrl: stub.url });
-    await sendDm({ db, slack, enqueueTimeout: makeEnqueueTimeoutRecorder() }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
+    await sendDm({ db, slack, enqueueTimeout: makeEnqueueTimeoutRecorder(), enqueueReminders: makeEnqueueRemindersRecorder() }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
     const log = await (await fetch(`${stub.url}/__stub/messages`)).json();
     expect(log).toHaveLength(1);
     expect(log[0].text).toContain("What have you done since");
@@ -84,9 +90,10 @@ describe("sendDm", () => {
     const slack = createSlackClient({ token: "xoxb-test", baseUrl: stub.url });
     const job = { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" };
     const enqueueTimeout = makeEnqueueTimeoutRecorder();
-    await sendDm({ db, slack, enqueueTimeout }, job);
+    const enqueueReminders = makeEnqueueRemindersRecorder();
+    await sendDm({ db, slack, enqueueTimeout, enqueueReminders }, job);
     await fetch(`${stub.url}/__stub/reset`, { method: "POST" });
-    await sendDm({ db, slack, enqueueTimeout }, job);
+    await sendDm({ db, slack, enqueueTimeout, enqueueReminders }, job);
 
     const reports = await sql`select count(*)::int as n from standup_reports where run_id = ${runId} and slack_user_id = 'U_SEND'`;
     expect(reports[0].n).toBe(1);
@@ -100,7 +107,7 @@ describe("sendDm", () => {
     const { standupId, runId } = await seedRun(null);
     const slack = createSlackClient({ token: "xoxb-test", baseUrl: stub.url });
 
-    await sendDm({ db, slack, enqueueTimeout: makeEnqueueTimeoutRecorder() }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
+    await sendDm({ db, slack, enqueueTimeout: makeEnqueueTimeoutRecorder(), enqueueReminders: makeEnqueueRemindersRecorder() }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
 
     const log: Array<{ blocks?: string }> = await (await fetch(`${stub.url}/__stub/messages`)).json();
     const connect = log.find((p) => (p.blocks ?? "").includes("/api/slack/install"));
@@ -113,7 +120,7 @@ describe("sendDm", () => {
     const { standupId, runId } = await seedRun(null);
     const slack = createSlackClient({ token: "xoxb-test", baseUrl: stub.url });
 
-    await sendDm({ db, slack, enqueueTimeout: makeEnqueueTimeoutRecorder() }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
+    await sendDm({ db, slack, enqueueTimeout: makeEnqueueTimeoutRecorder(), enqueueReminders: makeEnqueueRemindersRecorder() }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
 
     const log: Array<{ blocks?: string }> = await (await fetch(`${stub.url}/__stub/messages`)).json();
     const connect = log.find((p) => (p.blocks ?? "").includes("/api/slack/install"));
@@ -124,7 +131,7 @@ describe("sendDm", () => {
     const { standupId, runId } = await seedRun(null);
     const enqueueTimeout = makeEnqueueTimeoutRecorder();
     const slack = createSlackClient({ token: "xoxb-test", baseUrl: stub.url });
-    await sendDm({ db, slack, enqueueTimeout }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
+    await sendDm({ db, slack, enqueueTimeout, enqueueReminders: makeEnqueueRemindersRecorder() }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
     expect(enqueueTimeout.calls).toHaveLength(1);
     expect(enqueueTimeout.calls[0].job).toEqual({ runId, slackUserId: "U_SEND" });
     expect(enqueueTimeout.calls[0].delayMs).toBeGreaterThan(0);
@@ -135,8 +142,18 @@ describe("sendDm", () => {
     const { standupId, runId } = await seedRun(null);
     const enqueueTimeout = makeEnqueueTimeoutRecorder();
     const slack = createSlackClient({ token: "xoxb-test", baseUrl: stub.url });
-    await sendDm({ db, slack, enqueueTimeout }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
+    await sendDm({ db, slack, enqueueTimeout, enqueueReminders: makeEnqueueRemindersRecorder() }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
     expect(enqueueTimeout.calls[0]?.delayMs).toBe(1234);
     delete process.env.STANDUP_TIMEOUT_MS;
+  });
+
+  it("enqueues the reminder series for the standup's interval", async () => {
+    const { standupId, runId } = await seedRun(null);
+    const slack = createSlackClient({ token: "xoxb-test", baseUrl: stub.url });
+    const enqueueReminders = makeEnqueueRemindersRecorder();
+    await sendDm({ db, slack, enqueueTimeout: makeEnqueueTimeoutRecorder(), enqueueReminders }, { runId, standupId, slackUserId: "U_SEND", slackDisplayName: "Send User" });
+    expect(enqueueReminders.calls).toHaveLength(1);
+    expect(enqueueReminders.calls[0].job).toEqual({ runId, slackUserId: "U_SEND" });
+    expect(enqueueReminders.calls[0].intervalMs).toBe(60 * 60_000); // default 60 min
   });
 });

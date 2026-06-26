@@ -3,7 +3,7 @@ import { interpolateLastReportDate } from "@poddaily/shared";
 import type { RetriggerJob } from "@poddaily/shared";
 import type { SlackClient } from "@poddaily/slack-client";
 import { ensureRunOpen, fanOutSends } from "./openRun";
-import type { Db, EnqueueSend, EnqueueTimeout } from "./types";
+import type { Db, EnqueueSend, EnqueueTimeout, EnqueueReminders } from "./types";
 
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 
@@ -12,6 +12,7 @@ export interface RetriggerDeps {
   slack: SlackClient;
   enqueueSend: EnqueueSend;
   enqueueTimeout: EnqueueTimeout;
+  enqueueReminders: EnqueueReminders;
 }
 
 /**
@@ -26,7 +27,7 @@ export interface RetriggerDeps {
  *   team so they aren't left without a standup. When the run already existed, stay self-scoped.
  */
 export async function retrigger(deps: RetriggerDeps, job: RetriggerJob): Promise<void> {
-  const { db, slack, enqueueSend, enqueueTimeout } = deps;
+  const { db, slack, enqueueSend, enqueueTimeout, enqueueReminders } = deps;
   const [standup] = await db.select().from(schema.standups).where(eq(schema.standups.id, job.standupId));
   if (!standup || !standup.isActive || !standup.teamId) return;
   const firstQuestion = standup.questions[0];
@@ -64,6 +65,10 @@ export async function retrigger(deps: RetriggerDeps, job: RetriggerJob): Promise
 
   const timeoutMs = Number(process.env.STANDUP_TIMEOUT_MS ?? FOUR_HOURS_MS);
   await enqueueTimeout({ runId: run.id, slackUserId: job.slackUserId }, { delayMs: timeoutMs });
+  await enqueueReminders(
+    { runId: run.id, slackUserId: job.slackUserId },
+    { intervalMs: (standup.reminderIntervalMinutes ?? 0) * 60_000, timeoutMs },
+  );
 
   // If we had to open the run ourselves, the scheduler never fanned out — recover the team
   // (the requester is excluded; they got the direct re-DM above). sendDm is idempotent.

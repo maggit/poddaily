@@ -1,6 +1,6 @@
 import { Queue } from "bullmq";
-import { QUEUE_NAME, SEND_DM_JOB } from "@poddaily/shared";
-import type { SendDmJob, EnqueueSend, TimeoutJob, EnqueueTimeout } from "./types";
+import { QUEUE_NAME, SEND_DM_JOB, REMINDER_JOB, reminderDelays } from "@poddaily/shared";
+import type { SendDmJob, EnqueueSend, TimeoutJob, EnqueueTimeout, EnqueueReminders, ReminderJob } from "./types";
 
 export { QUEUE_NAME };
 
@@ -38,6 +38,21 @@ export function makeEnqueueTimeout(queue: Queue): EnqueueTimeout {
       removeOnComplete: true,
       removeOnFail: false,
     });
+  };
+}
+
+/** An EnqueueReminders backed by a real BullMQ queue — one reminder job per delay. */
+export function makeEnqueueReminders(queue: Queue): EnqueueReminders {
+  return async (job: ReminderJob, opts: { intervalMs: number; timeoutMs: number }) => {
+    for (const delayMs of reminderDelays(opts.intervalMs, opts.timeoutMs)) {
+      await queue.add(REMINDER_JOB, job, {
+        delay: delayMs,
+        attempts: 3,
+        backoff: { type: "exponential", delay: 30_000 },
+        removeOnComplete: true,
+        removeOnFail: false,
+      });
+    }
   };
 }
 
