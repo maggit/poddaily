@@ -11,7 +11,10 @@ describe("oauth state", () => {
   });
   it("rejects a tampered signature", () => {
     const s = signState(SECRET, 1_000_000);
-    expect(verifyState(SECRET, s.slice(0, -1) + "0", 1_000_500)).toBe(false);
+    // Flip the last char to a guaranteed-different one (the sig is a random-nonce HMAC, so
+    // appending a fixed "0" would be a no-op ~1/16 of the time when it already ends in "0").
+    const tampered = s.slice(0, -1) + (s.endsWith("0") ? "1" : "0");
+    expect(verifyState(SECRET, tampered, 1_000_500)).toBe(false);
   });
   it("rejects a state signed with a different secret", () => {
     const s = signState("other-secret-aaaaaaaaaaaaaaaaaaaa", 1_000_000);
