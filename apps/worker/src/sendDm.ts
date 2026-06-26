@@ -11,7 +11,7 @@ const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
  * double-DM. The unique (run_id, slack_user_id) constraint is the backstop.
  */
 export async function sendDm(deps: SendDmDeps, job: SendDmJob): Promise<void> {
-  const { db, slack, enqueueTimeout } = deps;
+  const { db, slack, enqueueTimeout, enqueueReminders } = deps;
   const { runId, standupId, slackUserId, slackDisplayName } = job;
 
   const existing = await db
@@ -76,4 +76,8 @@ export async function sendDm(deps: SendDmDeps, job: SendDmJob): Promise<void> {
   // encodes the deadline; the timeout-report handler no-ops if the member finished first.
   const timeoutMs = Number(process.env.STANDUP_TIMEOUT_MS ?? FOUR_HOURS_MS);
   await enqueueTimeout({ runId, slackUserId }, { delayMs: timeoutMs });
+  await enqueueReminders(
+    { runId, slackUserId },
+    { intervalMs: (standup.reminderIntervalMinutes ?? 0) * 60_000, timeoutMs },
+  );
 }

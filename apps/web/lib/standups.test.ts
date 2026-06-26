@@ -28,6 +28,7 @@ describe("standup data access", () => {
       scheduleTz: "America/Mexico_City",
       introMessage: "Hi!",
       outroMessage: "Thanks!",
+      reminderIntervalMinutes: 60,
     });
     expect(s.scheduleCron).toBe("0 10 * * 1,2,3,4,5");
     const got = await getStandup(teamId);
@@ -42,12 +43,26 @@ describe("standup data access", () => {
       scheduleTz: "Europe/London",
       introMessage: "Hello",
       outroMessage: "Bye",
+      reminderIntervalMinutes: 60,
     });
     const got = await getStandup(teamId);
     expect(got?.scheduleCron).toBe("30 9 * * 1");
     expect((got?.questions as unknown[]).length).toBe(1);
     const [{ count }] = await sql`select count(*)::int as count from standups where team_id = ${teamId}`;
     expect(count).toBe(1);
+  });
+
+  it("round-trips reminderIntervalMinutes", async () => {
+    await upsertStandup(teamId, {
+      questions: [{ id: "q1", text: "Only one?", type: "text" }],
+      scheduleCron: "0 10 * * 1",
+      scheduleTz: "UTC",
+      introMessage: "Hi!",
+      outroMessage: "Thanks!",
+      reminderIntervalMinutes: 30,
+    });
+    const got = await getStandup(teamId);
+    expect(got?.reminderIntervalMinutes).toBe(30);
   });
 
   it("setStandupActive pauses and resumes the standup (is_active)", async () => {

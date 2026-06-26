@@ -5,11 +5,11 @@ import { SchedulePicker } from "./schedule-picker";
 import type { Question } from "@poddaily/shared";
 
 export function StandupForm({
-  action, questions, weekdays, hour, minute, tz, introMessage, outroMessage,
+  action, questions, weekdays, hour, minute, tz, introMessage, outroMessage, reminderIntervalMinutes,
 }: {
   action: (fd: FormData) => void | Promise<void>;
   questions: Question[]; weekdays: number[]; hour: number; minute: number; tz: string;
-  introMessage: string; outroMessage: string;
+  introMessage: string; outroMessage: string; reminderIntervalMinutes: number;
 }) {
   return (
     <form action={action} className="space-y-8">
@@ -29,6 +29,10 @@ export function StandupForm({
         <label className="space-y-1.5">
           <span className="block text-[13px] font-medium">Outro message</span>
           <textarea name="outroMessage" defaultValue={outroMessage} rows={3} className="w-full rounded-lg border border-input bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring" />
+        </label>
+        <label className="space-y-1.5">
+          <span className="block text-[13px] font-medium">Reminder interval (minutes, 0 = off)</span>
+          <input type="number" name="reminderIntervalMinutes" defaultValue={reminderIntervalMinutes} min={0} step={5} className="w-full rounded-lg border border-input bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring" />
         </label>
       </section>
       <div className="flex justify-end"><Button type="submit">Save standup</Button></div>

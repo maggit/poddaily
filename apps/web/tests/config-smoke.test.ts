@@ -22,7 +22,7 @@ describe("smoke:config", () => {
     const cron = cronFromWeekly({ weekdays: [1, 2, 3, 4, 5], hour: 10, minute: 0 });
     await upsertStandup(teamId, {
       questions: DEFAULT_QUESTIONS, scheduleCron: cron, scheduleTz: "America/Mexico_City",
-      introMessage: "Hi!", outroMessage: "Thanks!",
+      introMessage: "Hi!", outroMessage: "Thanks!", reminderIntervalMinutes: 60,
     });
     let got = await getStandup(teamId);
     expect(got?.scheduleCron).toBe("0 10 * * 1,2,3,4,5");
@@ -32,7 +32,7 @@ describe("smoke:config", () => {
     await upsertStandup(teamId, {
       questions: [{ id: "q1", text: "What's blocking you?", type: "text" }],
       scheduleCron: cronFromWeekly({ weekdays: [1], hour: 9, minute: 30 }),
-      scheduleTz: "Europe/London", introMessage: "Morning", outroMessage: "Done",
+      scheduleTz: "Europe/London", introMessage: "Morning", outroMessage: "Done", reminderIntervalMinutes: 60,
     });
     got = await getStandup(teamId);
     expect(got?.scheduleCron).toBe("30 9 * * 1");

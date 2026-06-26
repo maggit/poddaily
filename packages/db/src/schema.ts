@@ -1,5 +1,5 @@
 import {
-  pgTable, uuid, text, boolean, timestamp, jsonb, unique, date,
+  pgTable, uuid, text, boolean, timestamp, jsonb, unique, date, integer,
 } from "drizzle-orm/pg-core";
 import type { Question, ReportAnswer } from "@poddaily/shared";
 
@@ -36,6 +36,7 @@ export const standups = pgTable("standups", {
   introMessage: text("intro_message"),
   outroMessage: text("outro_message"),
   isActive: boolean("is_active").default(true),
+  reminderIntervalMinutes: integer("reminder_interval_minutes").notNull().default(60),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });

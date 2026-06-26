@@ -164,6 +164,12 @@ When an avatar is missing the card falls back to the member's initials.
   appends to today's thread). For this catch-up to fire, the **`web` service needs `REDIS_URL`**
   set (and `bullmq` is a `web` dependency) — it enqueues a `send-dm` job that the worker handles.
   Without `REDIS_URL` the member is still added; they just don't get the same-day DM.
+- **Reminders.** A member who gets their standup DM but doesn't finish receives recurring **DM**
+  nudges until they complete it or hit the 4h timeout. The cadence is **per-standup** — a
+  *"Reminder interval (minutes, 0 = off)"* field on the standup config page, **default 60 min**.
+  E.g. at 60 min with the 4h timeout, nudges fire at 1h / 2h / 3h. Driven by the worker (it
+  already needs `REDIS_URL`); no new env or Slack config. The `standup_reminders` table records
+  each nudge sent.
 
 ## Configuration
 
