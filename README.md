@@ -177,9 +177,13 @@ All configuration is via environment variables; copy `.env.example` to `.env.loc
 variable, where it comes from, and its local-vs-live value are documented in the
 [env var reference](ContextDB/00_index/getting-started.md#environment-variable-reference).
 
-`STANDUP_TIMEOUT_MS` (default `14400000` = 4h) is the per-report timeout deadline: after a
-member's standup DM has been open this long without finishing, the report is marked
-`timed_out` and is **not** broadcast. Lower it only for testing (e.g. `1500`).
+`STANDUP_TIMEOUT_MS` (default `14400000` = 4h) is the per-report **inactivity** timeout: the
+clock resets every time a member replies, so a report is only marked `timed_out` (and not
+broadcast) after this long with **no reply** — not a fixed deadline from when the DM was sent.
+A member can answer over the course of the morning as long as they don't go silent for the full
+window. Lower it only for testing (e.g. `1500`). **Set it to the same value on both the `api` and
+`worker` services** — the worker arms the timeout and the api resets it on each answer (the api
+stamps `standup_reports.timeout_at`); if they disagree, the reset deadline won't match the worker's.
 
 ## Testing
 
