@@ -342,4 +342,13 @@ describe("handleMessage", () => {
     expect(calls).toHaveLength(0);
     expect(slack.posts).toHaveLength(0);
   });
+
+  it("bumps timeout_at forward when an answer advances the report", async () => {
+    const slack = fakeSlack();
+    await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger: noEnq, makeUserSlack }, { slackUserId: USER, channel: DM, text: "first answer" });
+    const [r] = await sql`select status, timeout_at from standup_reports where slack_user_id = ${USER}`;
+    expect(r.status).toBe("in_progress"); // advanced to q2, not completed
+    expect(r.timeout_at).not.toBeNull();
+    expect(new Date(r.timeout_at).getTime()).toBeGreaterThan(Date.now());
+  });
 });

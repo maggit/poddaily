@@ -33,7 +33,7 @@ export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<void
     } else if (job.name === SEND_DM_JOB) {
       await sendDm({ db, slack, enqueueTimeout, enqueueReminders }, job.data as SendDmJob);
     } else if (job.name === "timeout-report") {
-      await timeoutReport({ db }, job.data as TimeoutJob);
+      await timeoutReport({ db, enqueueTimeout }, job.data as TimeoutJob);
     } else if (job.name === "retrigger") {
       await retrigger({ db, slack, enqueueSend, enqueueTimeout, enqueueReminders }, job.data as RetriggerJob);
     } else if (job.name === REMINDER_JOB) {

@@ -71,6 +71,9 @@ describe("retrigger", () => {
     expect(slack.posts.some((p) => p.text === "What did you do?")).toBe(true); // Q1 re-sent
     expect(enqueueTimeout.calls).toHaveLength(1);
     expect(enqueueTimeout.calls[0]).toEqual({ runId, slackUserId: USER });
+    const [rep] = await sql`select timeout_at from standup_reports where slack_user_id = ${USER}`;
+    expect(rep.timeout_at).not.toBeNull();
+    expect(new Date(rep.timeout_at).getTime()).toBeGreaterThan(Date.now());
   });
 
   it("opens the run + creates the report when no run exists yet", async () => {

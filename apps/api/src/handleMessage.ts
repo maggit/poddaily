@@ -23,6 +23,7 @@ export interface IncomingDm {
 
 const DEFAULT_OUTRO = "Thanks — your standup is in. ✅";
 const ABORT_REPLY = "No problem — skipping today's standup. 👋";
+const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 
 /**
  * Reconstruct progress from the user's open report, advance it via the pure reducer,
@@ -75,12 +76,14 @@ export async function handleMessage(deps: HandleMessageDeps, msg: IncomingDm): P
       }
       return;
 
-    case "next":
+    case "next": {
+      const timeoutMs = Number(process.env.STANDUP_TIMEOUT_MS ?? FOUR_HOURS_MS);
       await db.update(schema.standupReports)
-        .set({ answers: action.answers })
+        .set({ answers: action.answers, timeoutAt: new Date(Date.now() + timeoutMs) })
         .where(eq(schema.standupReports.id, report.id));
       await slack.postMessage(msg.channel, action.question.text);
       return;
+    }
 
     case "complete":
       await db.update(schema.standupReports)
