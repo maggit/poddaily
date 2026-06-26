@@ -1,0 +1,1 @@
+ALTER TABLE "standup_reports" ADD COLUMN "timeout_at" timestamp with time zone;

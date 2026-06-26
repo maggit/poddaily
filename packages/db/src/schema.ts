@@ -64,6 +64,7 @@ export const standupReports = pgTable("standup_reports", {
   channelPostTs: text("channel_post_ts"),
   reportedAt: timestamp("reported_at", { withTimezone: true }).defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  timeoutAt: timestamp("timeout_at", { withTimezone: true }),
 }, (t) => ({ uniqReportPerMember: unique().on(t.runId, t.slackUserId) }));
 
 export const slackUserTokens = pgTable("slack_user_tokens", {
