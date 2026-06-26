@@ -20,6 +20,7 @@ export default async function StandupConfigPage({ params }: { params: Promise<{ 
   const tz = standup?.scheduleTz ?? "America/Mexico_City";
   const introMessage = standup?.introMessage ?? "Hi! Time for Daily Standup.";
   const outroMessage = standup?.outroMessage ?? "Thanks for your update!";
+  const reminderIntervalMinutes = standup?.reminderIntervalMinutes ?? 60;
 
   async function saveAction(fd: FormData) {
     "use server";
@@ -30,12 +31,14 @@ export default async function StandupConfigPage({ params }: { params: Promise<{ 
     if (cleaned.length === 0) throw new Error("At least one question is required");
     if (weekdayNums.length === 0) throw new Error("Pick at least one weekday");
     if (Number.isNaN(h) || Number.isNaN(m)) throw new Error("A valid time is required");
+    const reminderIntervalMinutes = Math.max(0, Math.floor(Number(fd.get("reminderIntervalMinutes") ?? 60)) || 0);
     await upsertStandup(id, {
       questions: cleaned,
       scheduleCron: cronFromWeekly({ weekdays: weekdayNums, hour: h, minute: m }),
       scheduleTz: String(fd.get("scheduleTz") ?? "America/Mexico_City"),
       introMessage: String(fd.get("introMessage") ?? ""),
       outroMessage: String(fd.get("outroMessage") ?? ""),
+      reminderIntervalMinutes,
     });
     revalidatePath(`/teams/${id}/standup`);
     redirect(`/teams/${id}`);
@@ -69,6 +72,7 @@ export default async function StandupConfigPage({ params }: { params: Promise<{ 
         questions={questions}
         weekdays={weekdays} hour={hour} minute={minute} tz={tz}
         introMessage={introMessage} outroMessage={outroMessage}
+        reminderIntervalMinutes={reminderIntervalMinutes}
       />
     </div>
   );

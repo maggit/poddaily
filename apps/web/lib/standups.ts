@@ -10,6 +10,7 @@ export interface StandupConfig {
   scheduleTz: string;
   introMessage: string;
   outroMessage: string;
+  reminderIntervalMinutes?: number;
 }
 
 export async function getStandup(teamId: string): Promise<Standup | undefined> {
@@ -26,6 +27,7 @@ export async function upsertStandup(teamId: string, config: StandupConfig): Prom
     scheduleTz: config.scheduleTz,
     introMessage: config.introMessage,
     outroMessage: config.outroMessage,
+    reminderIntervalMinutes: config.reminderIntervalMinutes ?? 60,
     updatedAt: new Date(),
   };
   const [s] = await db

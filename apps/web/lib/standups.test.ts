@@ -50,6 +50,19 @@ describe("standup data access", () => {
     expect(count).toBe(1);
   });
 
+  it("round-trips reminderIntervalMinutes", async () => {
+    await upsertStandup(teamId, {
+      questions: [{ id: "q1", text: "Only one?", type: "text" }],
+      scheduleCron: "0 10 * * 1",
+      scheduleTz: "UTC",
+      introMessage: "Hi!",
+      outroMessage: "Thanks!",
+      reminderIntervalMinutes: 30,
+    });
+    const got = await getStandup(teamId);
+    expect(got?.reminderIntervalMinutes).toBe(30);
+  });
+
   it("setStandupActive pauses and resumes the standup (is_active)", async () => {
     await setStandupActive(teamId, false);
     let [row] = await sql`select is_active from standups where team_id = ${teamId}`;
