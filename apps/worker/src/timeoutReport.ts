@@ -1,26 +1,35 @@
 import { schema, eq, and, finalizeRunIfDone } from "@poddaily/db";
-import type { Db, TimeoutJob } from "./types";
+import type { Db, TimeoutJob, EnqueueTimeout } from "./types";
 
 export interface TimeoutReportDeps {
   db: Db;
+  enqueueTimeout: EnqueueTimeout;
 }
 
 /**
- * Time out a member's report if it's still in_progress when this job fires (the job's
- * delay encodes the 4h, so firing == 4h elapsed — no clock recheck needed). No-op if the
- * member already finished (completed) or aborted (timed_out via `skip all`). Then finalize
- * the run, which closes it once every report is terminal.
+ * Time out a member's report if it's still in_progress AND its (inactivity) deadline has
+ * passed. If the member has replied since this job was enqueued, `timeout_at` has moved into
+ * the future — re-enqueue this job for the new deadline instead of timing out. No-op if the
+ * report already finished/aborted. A null `timeout_at` (legacy row) times out immediately.
  */
 export async function timeoutReport(deps: TimeoutReportDeps, job: TimeoutJob): Promise<void> {
-  const { db } = deps;
+  const { db, enqueueTimeout } = deps;
   const [report] = await db
-    .select({ id: schema.standupReports.id, status: schema.standupReports.status })
+    .select({ id: schema.standupReports.id, status: schema.standupReports.status, timeoutAt: schema.standupReports.timeoutAt })
     .from(schema.standupReports)
     .where(and(
       eq(schema.standupReports.runId, job.runId),
       eq(schema.standupReports.slackUserId, job.slackUserId),
     ));
   if (!report || report.status !== "in_progress") return;
+
+  if (report.timeoutAt) {
+    const remainingMs = report.timeoutAt.getTime() - Date.now();
+    if (remainingMs > 0) {
+      await enqueueTimeout({ runId: job.runId, slackUserId: job.slackUserId }, { delayMs: remainingMs });
+      return;
+    }
+  }
 
   await db
     .update(schema.standupReports)
