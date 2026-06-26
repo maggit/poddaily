@@ -28,6 +28,7 @@ describe("standup data access", () => {
       scheduleTz: "America/Mexico_City",
       introMessage: "Hi!",
       outroMessage: "Thanks!",
+      reminderIntervalMinutes: 60,
     });
     expect(s.scheduleCron).toBe("0 10 * * 1,2,3,4,5");
     const got = await getStandup(teamId);
@@ -42,6 +43,7 @@ describe("standup data access", () => {
       scheduleTz: "Europe/London",
       introMessage: "Hello",
       outroMessage: "Bye",
+      reminderIntervalMinutes: 60,
     });
     const got = await getStandup(teamId);
     expect(got?.scheduleCron).toBe("30 9 * * 1");
