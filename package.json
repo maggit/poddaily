@@ -5,8 +5,12 @@
   "engines": { "node": ">=22" },
   "packageManager": "pnpm@10.28.2",
   "scripts": {
-    "test": "vitest run",
+    "test": "pnpm run check && vitest run",
+    "test:run": "vitest run",
     "test:watch": "vitest",
+    "check": "pnpm run lint && pnpm run typecheck",
+    "lint": "pnpm --filter @poddaily/web lint",
+    "typecheck": "pnpm --filter @poddaily/web typecheck",
     "db:generate": "pnpm --filter @poddaily/db generate",
     "db:migrate": "pnpm --filter @poddaily/db migrate",
     "seed": "pnpm --filter @poddaily/db seed",
