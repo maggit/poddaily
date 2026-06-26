@@ -60,6 +60,10 @@ export async function sendDm(deps: SendDmDeps, job: SendDmJob): Promise<void> {
     );
   }
 
+  // Per-report 4h timeout (Step 7). Read at call time so tests can override. The delay
+  // encodes the deadline; the timeout-report handler no-ops if the member finished first.
+  const timeoutMs = Number(process.env.STANDUP_TIMEOUT_MS ?? FOUR_HOURS_MS);
+
   await db
     .insert(schema.standupReports)
     .values({
@@ -69,12 +73,10 @@ export async function sendDm(deps: SendDmDeps, job: SendDmJob): Promise<void> {
       answers: [],
       status: "in_progress",
       dmThreadTs: firstTs ?? q1Ts,
+      timeoutAt: new Date(Date.now() + timeoutMs),
     })
     .onConflictDoNothing({ target: [schema.standupReports.runId, schema.standupReports.slackUserId] });
 
-  // Per-report 4h timeout (Step 7). Read at call time so tests can override. The delay
-  // encodes the deadline; the timeout-report handler no-ops if the member finished first.
-  const timeoutMs = Number(process.env.STANDUP_TIMEOUT_MS ?? FOUR_HOURS_MS);
   await enqueueTimeout({ runId, slackUserId }, { delayMs: timeoutMs });
   await enqueueReminders(
     { runId, slackUserId },

@@ -74,6 +74,10 @@ describe("sendDm", () => {
     expect(reports[0].status).toBe("in_progress");
     expect(reports[0].answers).toEqual([]);
     expect(reports[0].dm_thread_ts).toBeTruthy();
+
+    const [rep] = await sql`select timeout_at from standup_reports where slack_user_id = 'U_SEND'`;
+    expect(rep.timeout_at).not.toBeNull();
+    expect(new Date(rep.timeout_at).getTime()).toBeGreaterThan(Date.now());
   });
 
   it("skips the intro post when introMessage is null (Q1 only)", async () => {

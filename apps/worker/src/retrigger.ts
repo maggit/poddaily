@@ -52,18 +52,19 @@ export async function retrigger(deps: RetriggerDeps, job: RetriggerJob): Promise
   if (standup.introMessage) firstTs = await slack.postMessage(channelId, standup.introMessage);
   const q1Ts = await slack.postMessage(channelId, q1Text);
 
+  const timeoutMs = Number(process.env.STANDUP_TIMEOUT_MS ?? FOUR_HOURS_MS);
+
   await db
     .insert(schema.standupReports)
-    .values({ runId: run.id, slackUserId: job.slackUserId, slackDisplayName: job.slackDisplayName, answers: [], status: "in_progress", dmThreadTs: firstTs ?? q1Ts })
+    .values({ runId: run.id, slackUserId: job.slackUserId, slackDisplayName: job.slackDisplayName, answers: [], status: "in_progress", dmThreadTs: firstTs ?? q1Ts, timeoutAt: new Date(Date.now() + timeoutMs) })
     .onConflictDoUpdate({
       target: [schema.standupReports.runId, schema.standupReports.slackUserId],
-      set: { answers: [], status: "in_progress", dmThreadTs: firstTs ?? q1Ts, reportedAt: null },
+      set: { answers: [], status: "in_progress", dmThreadTs: firstTs ?? q1Ts, reportedAt: null, timeoutAt: new Date(Date.now() + timeoutMs) },
     });
 
   // The run may have been completed by the timeout sweeper — re-open it.
   await db.update(schema.standupRuns).set({ status: "running" }).where(eq(schema.standupRuns.id, run.id));
 
-  const timeoutMs = Number(process.env.STANDUP_TIMEOUT_MS ?? FOUR_HOURS_MS);
   await enqueueTimeout({ runId: run.id, slackUserId: job.slackUserId }, { delayMs: timeoutMs });
   await enqueueReminders(
     { runId: run.id, slackUserId: job.slackUserId },
