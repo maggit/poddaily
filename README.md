@@ -27,8 +27,8 @@ Checked items are implemented; unchecked are planned. Updated at the end of each
 - [x] Reports dashboard (today + history, per-person check-in feed with Slack avatars) — admin-only
 - [x] Re-trigger a missed/timed-out standup via a DM keyword (`redo` / `restart` / `start` / `standup`)
 
-**Phase 2 — Admin UX:** today's dashboard ✅ (sub-project A — reports dashboard, shipped),
-participation stats, one-click reminders (B), pause/resume + admin controls (C), RBAC tiers (D).
+**Phase 2 — Admin UX:** reports dashboard ✅ (A), reminders ✅ (B), pause/resume + Slack-connected
+badge ✅ (C); **RBAC tiers (D) is the only remaining piece.**
 **Phase 4 — P1:** analytics, `/standup` slash command, Databricks export webhook, streaks.
 
 See the full [roadmap](#roadmap) and the [PRD](ContextDB/01_specs/poddaily-prd.md) for scope.
@@ -221,7 +221,7 @@ the [project map](ContextDB/00_index/project-map.md): specs, architecture, and t
 | Phase | Scope |
 |---|---|
 | 1 — Core ✅ feature-complete | Auth, team CRUD, standup config, Slack DM flow, channel broadcast, scheduler |
-| 2 — Admin UX | Reports dashboard ✅ (sub-project A), participation stats, reminders (B), pause/resume + admin controls (C), RBAC (D) |
+| 2 — Admin UX | Reports dashboard ✅ (A), reminders ✅ (B), pause/resume + connected badge ✅ (C), RBAC (D) — only D remains |
 | 3 — Polish + launch | Deploy, env config, docs, pilot |
 | 4 — P1 features | Analytics, slash command, export webhook, streaks |
 
