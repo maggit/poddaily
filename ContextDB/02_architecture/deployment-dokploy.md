@@ -143,6 +143,14 @@ When `apps/api` + `apps/worker` land, the full stack runs from `docker-compose.d
 - **A manual `trigger` still respects the configured send time + active weekdays.** It's not a
   "send now" button: each member's DM fires at their local configured time, and `openRun` skips
   non-active weekdays. It only sends immediately if the configured time has already passed today.
+- **After deploying RBAC (or any release that adds login-time provisioning), existing logged-in
+  users must sign out and back in.** Roles are created by the `signIn` callback, which only runs
+  at authentication time — a session held from *before* the deploy is never provisioned, so the
+  user resolves to `viewer` and the **People** page throws `Forbidden` even though they're "logged
+  in." The fix is a full re-login (Sign out in the sidebar, or `/api/auth/signout`); the first
+  re-login while `app_users` has zero admins bootstraps that user to `admin`. Symptom that pins
+  it: `select * from app_users` is empty yet the dashboard renders. (Learned walking the Phase 2-D
+  live smoke — see `08_logs/2026-06-27-rbac-live-smoke.md`.)
 
 ## Local vs deploy
 
