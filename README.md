@@ -28,7 +28,7 @@ Checked items are implemented; unchecked are planned. Updated at the end of each
 - [x] Re-trigger a missed/timed-out standup via a DM keyword (`redo` / `restart` / `start` / `standup`)
 
 **Phase 2 — Admin UX:** reports dashboard ✅ (A), reminders ✅ (B), pause/resume + Slack-connected
-badge ✅ (C); **RBAC tiers (D) is the only remaining piece.**
+badge ✅ (C), RBAC tiers ✅ (D) — **Phase 2 is complete.**
 **Phase 4 — P1:** analytics, `/standup` slash command, Databricks export webhook, streaks.
 
 See the full [roadmap](#roadmap) and the [PRD](ContextDB/01_specs/poddaily-prd.md) for scope.
@@ -171,6 +171,32 @@ When an avatar is missing the card falls back to the member's initials.
   already needs `REDIS_URL`); no new env or Slack config. The `standup_reminders` table records
   each nudge sent.
 
+### Roles & access (Phase 2 — sub-project D)
+
+poddaily has three role tiers for the admin web app:
+
+| Role | What they can do |
+|---|---|
+| **viewer** | View teams, reports, standup config — no edits |
+| **manager** | Everything a viewer can do, plus edit and configure the teams they own |
+| **admin** | Everything — create teams, edit any team, assign roles, assign team managers |
+
+**Bootstrap.** On a fresh install, the very first person to log in (while no admin exists in
+the database) is automatically made `admin`. Every subsequent new login is auto-provisioned as
+a `viewer`. Existing users keep their role on re-login.
+
+**Promoting users.** An admin opens **People** (sidebar link, admin-only) and changes any
+user's role via the dropdown. Role changes take effect immediately — roles are read fresh from
+the database on every request, not cached in the login token, so no re-login is required. To
+let a manager administer a team, promote them to `manager` on the People page, then open the
+team's page and assign them under the **Managers** section.
+
+**Safeguard.** The last admin cannot be demoted. Attempting to do so is rejected server-side,
+so no install can become locked out of its own admin UI.
+
+See the [RBAC ADR](ContextDB/03_decisions/2026-06-26-rbac-role-tiers.md) and the
+[role-tier spec](ContextDB/01_specs/phase-2-d-rbac-spec.md) for the full design.
+
 ## Configuration
 
 All configuration is via environment variables; copy `.env.example` to `.env.local`. Each
@@ -221,7 +247,7 @@ the [project map](ContextDB/00_index/project-map.md): specs, architecture, and t
 | Phase | Scope |
 |---|---|
 | 1 — Core ✅ feature-complete | Auth, team CRUD, standup config, Slack DM flow, channel broadcast, scheduler |
-| 2 — Admin UX | Reports dashboard ✅ (A), reminders ✅ (B), pause/resume + connected badge ✅ (C), RBAC (D) — only D remains |
+| 2 — Admin UX ✅ | Reports dashboard ✅ (A), reminders ✅ (B), pause/resume + connected badge ✅ (C), RBAC tiers ✅ (D) |
 | 3 — Polish + launch | Deploy, env config, docs, pilot |
 | 4 — P1 features | Analytics, slash command, export webhook, streaks |
 
