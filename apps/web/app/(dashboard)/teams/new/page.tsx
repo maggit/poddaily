@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createTeam } from "@/lib/teams";
+import { requireAdmin } from "@/lib/authz";
 import { PageHeader } from "@/components/page-header";
 import { CreateTeamForm } from "@/components/teams/create-team-form";
 
 async function createTeamAction(formData: FormData) {
   "use server";
+  await requireAdmin();
   const name = String(formData.get("name") ?? "").trim();
   const slackChannelName = String(formData.get("slackChannelName") ?? "").trim();
   const slackChannelId = String(formData.get("slackChannelId") ?? "").trim();

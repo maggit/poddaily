@@ -1,5 +1,5 @@
 import {
-  pgTable, uuid, text, boolean, timestamp, jsonb, unique, date, integer,
+  pgTable, pgEnum, uuid, text, boolean, timestamp, jsonb, unique, date, integer,
 } from "drizzle-orm/pg-core";
 import type { Question, ReportAnswer } from "@poddaily/shared";
 
@@ -82,6 +82,25 @@ export const standupReminders = pgTable("standup_reminders", {
   type: text("type").default("initial"),
 });
 
+export const userRole = pgEnum("user_role", ["viewer", "manager", "admin"]);
+
+export const appUsers = pgTable("app_users", {
+  slackUserId: text("slack_user_id").primaryKey(),
+  email: text("email"),
+  displayName: text("display_name"),
+  avatarUrl: text("avatar_url"),
+  role: userRole("role").notNull().default("viewer"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+});
+
+export const teamManagers = pgTable("team_managers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  teamId: uuid("team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+  slackUserId: text("slack_user_id").notNull().references(() => appUsers.slackUserId, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (t) => ({ uniqTeamManager: unique().on(t.teamId, t.slackUserId) }));
+
 export type Team = typeof teams.$inferSelect;
 export type NewTeam = typeof teams.$inferInsert;
 export type TeamMember = typeof teamMembers.$inferSelect;
@@ -96,3 +115,8 @@ export type SlackUserToken = typeof slackUserTokens.$inferSelect;
 export type NewSlackUserToken = typeof slackUserTokens.$inferInsert;
 export type StandupReminder = typeof standupReminders.$inferSelect;
 export type NewStandupReminder = typeof standupReminders.$inferInsert;
+export type AppUser = typeof appUsers.$inferSelect;
+export type NewAppUser = typeof appUsers.$inferInsert;
+export type UserRole = (typeof userRole.enumValues)[number];
+export type TeamManager = typeof teamManagers.$inferSelect;
+export type NewTeamManager = typeof teamManagers.$inferInsert;

@@ -79,6 +79,38 @@ authed_at TIMESTAMPTZ DEFAULT NOW()
 Stores the per-reporter Slack **user token** used to post reports as the user. See
 [post-as-user ADR](../03_decisions/2026-06-14-post-as-user-tokens.md).
 
+### `app_users` ⬅ DELTA (new table — Phase 2-D)
+```sql
+slack_user_id   TEXT PRIMARY KEY            -- Slack user_id (session sub); consistent with team_members + slack_user_tokens
+email           TEXT
+display_name    TEXT
+avatar_url      TEXT
+role            user_role NOT NULL DEFAULT 'viewer'  -- ENUM: 'viewer' | 'manager' | 'admin'
+created_at      TIMESTAMPTZ DEFAULT NOW()
+last_login_at   TIMESTAMPTZ
+```
+Stores every admin-portal user and their global role. The row is upserted on each Slack OAuth
+login (refreshing `display_name`, `email`, `avatar_url`, `last_login_at`; role is preserved for
+existing users). **Distinct from `team_members`:** `team_members` = people who report in
+standups; `app_users` = people who log into the admin dashboard. Someone can be in both.
+
+See the [bootstrap / auto-provision rules](2026-06-26-rbac-role-tiers.md#3-bootstrap-first-login-while-zero-admins-exist--admin)
+and [RBAC ADR](../03_decisions/2026-06-26-rbac-role-tiers.md).
+
+### `team_managers` ⬅ DELTA (new table — Phase 2-D)
+```sql
+id              UUID PK DEFAULT gen_random_uuid()
+team_id         UUID REFERENCES teams(id) ON DELETE CASCADE
+slack_user_id   TEXT REFERENCES app_users(slack_user_id) ON DELETE CASCADE
+created_at      TIMESTAMPTZ DEFAULT NOW()
+UNIQUE(team_id, slack_user_id)
+```
+Many-to-many join: records which `manager`-role users own which teams. A manager can own
+multiple teams; a team can have multiple managers. **Distinct from `team_members`:**
+`team_members` = standup reporters for that team; `team_managers` = dashboard administrators
+(the `manager` role tier) who may edit that team's config, members, and standup. Assignment is
+a two-step admin action: promote the user to `manager` on the People page, then assign to teams.
+
 ### `standup_reminders` (log; Phase 2 usage)
 ```sql
 id UUID PK
@@ -95,6 +127,8 @@ type TEXT DEFAULT 'initial'     -- initial | reminder
 | `team_members.timezone` | Per-user-TZ scheduling needs each member's IANA zone ([ADR](../03_decisions/2026-06-14-per-user-timezone.md)) |
 | `slack_user_tokens` table | Post-as-user requires storing each reporter's user token, encrypted ([ADR](../03_decisions/2026-06-14-post-as-user-tokens.md)) |
 | `standup_reports.status` | Stateless engine resumes from `in_progress`; timed-out partials must not post ([ADR](../03_decisions/2026-06-14-stateless-dm-state.md)) |
+| `app_users` table | DB-backed role tiers; first-login bootstrap; fresh-per-request role evaluation ([ADR](../03_decisions/2026-06-26-rbac-role-tiers.md)) |
+| `team_managers` table | Many-to-many manager ownership scope; two-step assignment ([ADR](../03_decisions/2026-06-26-rbac-role-tiers.md)) |
 
 ## Notes
 

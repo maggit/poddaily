@@ -3,10 +3,11 @@ import { StatusPill } from "@/components/ui/status-pill";
 import type { TeamMember } from "@poddaily/db/schema";
 
 export function MemberTable({
-  members, connectedUserIds, setPermAction, removeAction,
+  members, connectedUserIds, editable = true, setPermAction, removeAction,
 }: {
   members: TeamMember[];
   connectedUserIds: string[];
+  editable?: boolean;
   setPermAction: (fd: FormData) => void | Promise<void>;
   removeAction: (fd: FormData) => void | Promise<void>;
 }) {
@@ -22,13 +23,17 @@ export function MemberTable({
           <Td className="text-muted-foreground">{m.timezone ?? "—"}</Td>
           {(["canView", "canReport", "canEdit"] as const).map((perm) => (
             <Td key={perm} className="text-center">
-              <form action={setPermAction} className="inline">
-                <input type="hidden" name="memberId" value={m.id} />
-                <input type="hidden" name="canView" value={String(perm === "canView" ? !m.canView : m.canView)} />
-                <input type="hidden" name="canReport" value={String(perm === "canReport" ? !m.canReport : m.canReport)} />
-                <input type="hidden" name="canEdit" value={String(perm === "canEdit" ? !m.canEdit : m.canEdit)} />
-                <button type="submit" aria-label={`toggle ${perm}`} className={`h-4 w-4 rounded border ${m[perm] ? "border-accent bg-accent" : "border-input bg-background"}`} />
-              </form>
+              {editable ? (
+                <form action={setPermAction} className="inline">
+                  <input type="hidden" name="memberId" value={m.id} />
+                  <input type="hidden" name="canView" value={String(perm === "canView" ? !m.canView : m.canView)} />
+                  <input type="hidden" name="canReport" value={String(perm === "canReport" ? !m.canReport : m.canReport)} />
+                  <input type="hidden" name="canEdit" value={String(perm === "canEdit" ? !m.canEdit : m.canEdit)} />
+                  <button type="submit" aria-label={`toggle ${perm}`} className={`h-4 w-4 rounded border ${m[perm] ? "border-accent bg-accent" : "border-input bg-background"}`} />
+                </form>
+              ) : (
+                <span aria-label={perm} className={`inline-block h-4 w-4 rounded border ${m[perm] ? "border-accent bg-accent" : "border-input bg-background"}`} />
+              )}
             </Td>
           ))}
           <Td>
@@ -37,10 +42,12 @@ export function MemberTable({
               : <StatusPill tone="neutral">Not connected</StatusPill>}
           </Td>
           <Td className="text-right">
-            <form action={removeAction} className="inline">
-              <input type="hidden" name="memberId" value={m.id} />
-              <button type="submit" className="text-danger hover:underline">Remove</button>
-            </form>
+            {editable ? (
+              <form action={removeAction} className="inline">
+                <input type="hidden" name="memberId" value={m.id} />
+                <button type="submit" className="text-danger hover:underline">Remove</button>
+              </form>
+            ) : null}
           </Td>
         </tr>
       ))}

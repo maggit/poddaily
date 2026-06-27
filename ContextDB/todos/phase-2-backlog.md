@@ -1,7 +1,7 @@
 # Phase 2 Backlog
 
-Phase 1 Core was feature-complete 2026-06-21. Phase 2 (Admin UX) is almost done — only RBAC
-remains. Each remaining item gets its own spec → plan → implementation cycle when picked up.
+Phase 1 Core was feature-complete 2026-06-21. Phase 2 (Admin UX) is **complete** — all four
+sub-projects (A–D) shipped. Each item had its own spec → plan → implementation cycle.
 
 ## ✅ Shipped (Phase 2 + extras)
 
@@ -29,12 +29,16 @@ Extras shipped alongside (not in the original A–D plan):
   `08_logs/2026-06-26-inactivity-timeout.md`.
 - **Build verification hardening** — `pnpm test` now runs web ESLint + `tsc` before vitest, so a
   lint/type error in `apps/web` can't pass local checks and break the Docker build.
+- **D — RBAC tiers** (PRD Q3) — three DB-backed role tiers (viewer / manager / admin) gating
+  who can edit teams and standups; first-login bootstrap (zero-admins → admin); auto-provision
+  new logins as viewer; per-team manager ownership via `team_managers` join table; People page
+  for role assignment; last-admin safeguard.
+  Spec: [../01_specs/phase-2-d-rbac-spec.md](../01_specs/phase-2-d-rbac-spec.md) ·
+  Plan: [../../docs/superpowers/plans/2026-06-26-phase-2-d-rbac.md](../../docs/superpowers/plans/2026-06-26-phase-2-d-rbac.md)
 
 ## ⬜ Remaining
 
-- **D — RBAC tiers** (PRD Q3) — today anyone who completes admin Slack OAuth is a full admin;
-  add role tiers (member vs. EM/director) gating who can edit teams/standups. The last planned
-  Phase 2 item; cross-cutting (auth + most admin pages). Lower urgency for a small internal tool.
+_(Phase 2 is complete — all A–D items shipped.)_
 
 ## Deferred from the PRD / Phase 1 spec (decide before building)
 

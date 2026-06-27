@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getTeam } from "@/lib/teams";
 import { getStandup, upsertStandup, setStandupActive } from "@/lib/standups";
+import { requireTeamEdit, getCurrentUser, canEditTeam } from "@/lib/authz";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
 import { StandupForm } from "@/components/standups/standup-form";
@@ -24,6 +25,7 @@ export default async function StandupConfigPage({ params }: { params: Promise<{ 
 
   async function saveAction(fd: FormData) {
     "use server";
+    await requireTeamEdit(id);
     const parsedQuestions = JSON.parse(String(fd.get("questions") ?? "[]")) as Question[];
     const cleaned = parsedQuestions.map((q) => ({ ...q, text: q.text.trim() })).filter((q) => q.text.length > 0);
     const weekdayNums = String(fd.get("weekdays") ?? "").split(",").filter(Boolean).map(Number);
@@ -46,11 +48,14 @@ export default async function StandupConfigPage({ params }: { params: Promise<{ 
 
   async function toggleActiveAction() {
     "use server";
+    await requireTeamEdit(id);
     const current = await getStandup(id);
     if (!current) return;
     await setStandupActive(id, !current.isActive);
     revalidatePath(`/teams/${id}/standup`);
   }
+
+  const editable = await canEditTeam(await getCurrentUser(), id);
 
   return (
     <div className="space-y-6">
@@ -60,20 +65,26 @@ export default async function StandupConfigPage({ params }: { params: Promise<{ 
           <StatusPill tone={standup.isActive === false ? "neutral" : "success"}>
             {standup.isActive === false ? "Paused" : "Active"}
           </StatusPill>
-          <form action={toggleActiveAction}>
-            <button type="submit" className="text-[13px] font-medium text-accent hover:underline">
-              {standup.isActive === false ? "Resume standup" : "Pause standup"}
-            </button>
-          </form>
+          {editable ? (
+            <form action={toggleActiveAction}>
+              <button type="submit" className="text-[13px] font-medium text-accent hover:underline">
+                {standup.isActive === false ? "Resume standup" : "Pause standup"}
+              </button>
+            </form>
+          ) : null}
         </div>
       ) : null}
-      <StandupForm
-        action={saveAction}
-        questions={questions}
-        weekdays={weekdays} hour={hour} minute={minute} tz={tz}
-        introMessage={introMessage} outroMessage={outroMessage}
-        reminderIntervalMinutes={reminderIntervalMinutes}
-      />
+      {editable ? (
+        <StandupForm
+          action={saveAction}
+          questions={questions}
+          weekdays={weekdays} hour={hour} minute={minute} tz={tz}
+          introMessage={introMessage} outroMessage={outroMessage}
+          reminderIntervalMinutes={reminderIntervalMinutes}
+        />
+      ) : (
+        <p className="text-sm text-muted-foreground">You have read-only access to this standup.</p>
+      )}
     </div>
   );
 }
