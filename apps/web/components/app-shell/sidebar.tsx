@@ -1,12 +1,16 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, ListChecks, MessageSquare, Settings, Shield, type LucideIcon } from "lucide-react";
+import { Users, ListChecks, MessageSquare, Settings, Shield, LogOut, type LucideIcon } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/nav";
 
 const ICONS: Record<string, LucideIcon> = { Users, ListChecks, MessageSquare, Settings };
 
-export function Sidebar({ userName, isAdmin }: { userName?: string; isAdmin?: boolean }) {
+export function Sidebar({ userName, isAdmin, signOutAction }: {
+  userName?: string;
+  isAdmin?: boolean;
+  signOutAction?: (formData: FormData) => void | Promise<void>;
+}) {
   const pathname = usePathname();
   return (
     <aside className="flex w-56 flex-col border-r border-border bg-surface-muted p-3">
@@ -44,6 +48,14 @@ export function Sidebar({ userName, isAdmin }: { userName?: string; isAdmin?: bo
           {(userName ?? "?").slice(0, 1).toUpperCase()}
         </span>
         <span className="truncate text-xs text-muted-foreground">{userName ?? "Account"}</span>
+        {signOutAction ? (
+          <form action={signOutAction} className="ml-auto">
+            <button type="submit" title="Sign out" aria-label="Sign out"
+              className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+              <LogOut className="h-[15px] w-[15px]" />
+            </button>
+          </form>
+        ) : null}
       </div>
     </aside>
   );
