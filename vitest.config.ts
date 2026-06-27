@@ -12,5 +12,7 @@ export default defineConfig({
     include: ["packages/**/*.test.ts", "apps/**/*.test.ts", "tools/**/*.test.ts"],
     env: { DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres" },
     testTimeout: 20000,
+    // DB-touching test files must run sequentially to avoid cross-file admin-count races.
+    fileParallelism: false,
   },
 });
