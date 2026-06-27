@@ -99,6 +99,14 @@ After the domain is live, add the admin-login redirect URL to the Slack app:
 `https://<dokploy-domain>/api/auth/callback/slack` (see
 [getting-started Track B](../00_index/getting-started.md#b2-create-the-slack-app-poddaily)).
 
+**Slash command registration.** Registering or changing a slash command (e.g. `/standup`)
+requires updating the Slack app from the manifest: open the app in [api.slack.com/apps](https://api.slack.com/apps),
+go to **App Manifest**, paste/update the YAML from `app_manifest.yaml`, and **Save**. The
+request URL for all slash commands is the same `/api/slack/events` endpoint that Bolt already
+serves for message events — no new endpoint needed. The `commands` bot scope is declared in
+the manifest, so no reinstall is needed for scope reasons; the save+update is enough to make
+the command appear and route correctly.
+
 ## Part E — Verify
 
 1. `https://<dokploy-domain>/login` → 200 (dark login, no DB needed).

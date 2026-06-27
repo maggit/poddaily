@@ -28,6 +28,12 @@ oauth_config:
       - groups:read
       - commands
 settings:
+  slash_commands:
+    - command: /standup
+      url: https://poddaily.example.com/api/slack/events
+      description: Start your standup, or check your status
+      usage_hint: "[status|help]"
+      should_escape: false
   event_subscriptions:
     request_url: https://poddaily.example.com/api/slack/events
     bot_events:
