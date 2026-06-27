@@ -1,5 +1,6 @@
 import { schema, eq, and, desc, getUserToken, finalizeRunIfDone, lastReportDateBefore } from "@poddaily/db";
-import { advanceReport, anchorDate, buildOpeningMessage, buildReportBlocks, interpolateLastReportDate } from "@poddaily/shared";
+import { advanceReport, buildOpeningMessage, buildReportBlocks, interpolateLastReportDate } from "@poddaily/shared";
+import { getMemberDayState } from "./standupState";
 import type { ReportAnswer, RetriggerJob } from "@poddaily/shared";
 import type { SlackClient } from "@poddaily/slack-client";
 import type { createDb } from "@poddaily/db";
@@ -212,44 +213,31 @@ const RETRIGGER_KEYWORDS = new Set(["redo", "restart", "start", "standup"]);
  * today — unless they've already completed it. No-op for non-keyword messages.
  */
 async function maybeRetrigger(deps: HandleMessageDeps, msg: IncomingDm): Promise<void> {
-  const { db, slack, enqueueRetrigger } = deps;
+  const { slack, enqueueRetrigger } = deps;
   if (!RETRIGGER_KEYWORDS.has(msg.text.trim().toLowerCase())) return;
 
-  const [member] = await db
-    .select({ teamId: schema.teamMembers.teamId, displayName: schema.teamMembers.slackDisplayName })
-    .from(schema.teamMembers)
-    .where(eq(schema.teamMembers.slackUserId, msg.slackUserId))
-    .limit(1);
-  if (!member?.teamId) {
+  const state = await getMemberDayState(deps.db, msg.slackUserId);
+  if (state.kind === "not_member") {
     await slack.postMessage(msg.channel, "You're not set up for a standup yet.");
     return;
   }
-  const [standup] = await db
-    .select({ id: schema.standups.id, scheduleTz: schema.standups.scheduleTz })
-    .from(schema.standups)
-    .where(eq(schema.standups.teamId, member.teamId));
-  if (!standup) {
+  if (state.kind === "no_standup") {
     await slack.postMessage(msg.channel, "Your team has no standup configured yet.");
     return;
   }
-
-  // Already completed today? Block. "today" is the run's tz-anchored date (matches the worker).
-  const todayDate = anchorDate(standup.scheduleTz, new Date());
-  const [todayRun] = await db
-    .select({ id: schema.standupRuns.id })
-    .from(schema.standupRuns)
-    .where(and(eq(schema.standupRuns.standupId, standup.id), eq(schema.standupRuns.scheduledDate, todayDate)));
-  if (todayRun) {
-    const [rep] = await db
-      .select({ status: schema.standupReports.status })
-      .from(schema.standupReports)
-      .where(and(eq(schema.standupReports.runId, todayRun.id), eq(schema.standupReports.slackUserId, msg.slackUserId)));
-    if (rep?.status === "completed") {
-      await slack.postMessage(msg.channel, "You've already reported today ✅");
-      return;
-    }
+  if (state.kind === "completed") {
+    await slack.postMessage(msg.channel, "You've already reported today ✅");
+    return;
   }
 
-  await enqueueRetrigger({ standupId: standup.id, slackUserId: msg.slackUserId, slackDisplayName: member.displayName, channel: msg.channel });
+  // in_progress or pending → (re)start. The worker retrigger() leaves an in_progress report
+  // untouched and re-opens absent/timed_out ones; this matches the prior behavior (enqueue
+  // unless already completed).
+  await enqueueRetrigger({
+    standupId: state.standup!.id,
+    slackUserId: msg.slackUserId,
+    slackDisplayName: state.member!.slackDisplayName,
+    channel: msg.channel,
+  });
   await slack.postMessage(msg.channel, "📋 Restarting your standup…");
 }
