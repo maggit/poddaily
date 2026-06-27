@@ -120,5 +120,5 @@ Per the [Slack message format](../01_specs/poddaily-prd.md#slack-message-format)
 - **DM send failures** retry 3× with exponential backoff (BullMQ).
 - **Timeout** — reports left `in_progress` after 4 hours become `timed_out`; partials never
   post to the channel.
-- **Signature verification** — `/api/slack/events` and `/api/slack/interactions` verify the
+- **Signature verification** — `/slack/events` and `/api/slack/interactions` verify the
   Slack signing secret before processing.

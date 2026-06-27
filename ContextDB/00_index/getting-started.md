@@ -190,7 +190,7 @@ can install apps (use a **dev workspace**, not production).
 3. **Redirect URLs** (add both):
    - `https://<tunnel>/api/slack/oauth/callback` — reporter user-OAuth.
    - `https://<tunnel>/api/auth/callback/slack` — admin NextAuth login.
-4. **Event Subscriptions** → enable → **Request URL:** `https://<tunnel>/api/slack/events`
+4. **Event Subscriptions** → enable → **Request URL:** `https://<tunnel>/slack/events`
    (must show "Verified") → **Subscribe to bot events:** `message.im`.
 5. **Install to Workspace** → approve. Then collect credentials:
    - **OAuth & Permissions → Bot User OAuth Token** → `SLACK_BOT_TOKEN` (`xoxb-…`).
