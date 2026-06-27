@@ -29,7 +29,7 @@ Checked items are implemented; unchecked are planned. Updated at the end of each
 
 **Phase 2 — Admin UX:** reports dashboard ✅ (A), reminders ✅ (B), pause/resume + Slack-connected
 badge ✅ (C), RBAC tiers ✅ (D) — **Phase 2 is complete.**
-**Phase 4 — P1:** analytics, `/standup` slash command, Databricks export webhook, streaks.
+**Phase 4 — P1:** analytics, ~~`/standup` slash command~~ ✅, Databricks export webhook, streaks.
 
 See the full [roadmap](#roadmap) and the [PRD](ContextDB/01_specs/poddaily-prd.md) for scope.
 
@@ -128,6 +128,27 @@ channel on completion as usual. If they've already reported today, the bot repli
 subscription — **no Slack app config change** — but the **`api` service now needs `REDIS_URL`**
 (it enqueues a `retrigger` job that the worker handles); `bullmq` is a runtime dependency of the
 api.
+
+### `/standup` slash command (Phase 4 — P1)
+
+Members can start or check their standup from **any Slack channel** using the `/standup` slash
+command. All replies are **ephemeral** (only the invoking member sees them); the actual Q&A
+conversation happens in the bot DM as usual.
+
+| Command | What it does |
+|---|---|
+| `/standup` or `/standup start` | Start your standup now — on demand, any day/time, bypassing the schedule. Blocks with a nudge if you've already reported; prompts you to finish the DM if one is already in progress. |
+| `/standup status` | Shows your status for today: reported / in progress (N of M questions answered) / not reported yet. |
+| `/standup help` | Lists the commands. Any unrecognized input also shows this. |
+
+The `start` subcommand reuses the existing retrigger worker — it opens today's run if needed and
+sends the standup intro + first question to your DM exactly as the DM keyword (`redo`/`start`/…)
+does. If you've already reported today, it says so and does nothing (consistent with the DM keyword
+behavior).
+
+**Deploy step.** After deploying, **update the Slack app from `app_manifest.yaml`** (Slack app
+config → App Manifest → paste the updated YAML → Save) so the `/standup` command registers and
+routes to the request URL. The `commands` bot scope is already granted — no reinstall needed.
 
 ### Reports dashboard (Phase 2 — sub-project A)
 
@@ -249,7 +270,7 @@ the [project map](ContextDB/00_index/project-map.md): specs, architecture, and t
 | 1 — Core ✅ feature-complete | Auth, team CRUD, standup config, Slack DM flow, channel broadcast, scheduler |
 | 2 — Admin UX ✅ | Reports dashboard ✅ (A), reminders ✅ (B), pause/resume + connected badge ✅ (C), RBAC tiers ✅ (D) |
 | 3 — Polish + launch | Deploy, env config, docs, pilot |
-| 4 — P1 features | Analytics, slash command, export webhook, streaks |
+| 4 — P1 features | Analytics, ~~slash command~~ ✅, export webhook, streaks |
 
 ## Contributing
 
