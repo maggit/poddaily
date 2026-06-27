@@ -1,12 +1,12 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, ListChecks, MessageSquare, Settings, type LucideIcon } from "lucide-react";
+import { Users, ListChecks, MessageSquare, Settings, Shield, type LucideIcon } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/nav";
 
-const ICONS: Record<string, LucideIcon> = { Users, ListChecks, MessageSquare, Settings };
+const ICONS: Record<string, LucideIcon> = { Users, ListChecks, MessageSquare, Settings, Shield };
 
-export function Sidebar({ userName }: { userName?: string }) {
+export function Sidebar({ userName, isAdmin }: { userName?: string; isAdmin?: boolean }) {
   const pathname = usePathname();
   return (
     <aside className="flex w-56 flex-col border-r border-border bg-surface-muted p-3">
@@ -26,6 +26,18 @@ export function Sidebar({ userName }: { userName?: string }) {
             </Link>
           );
         })}
+        {isAdmin ? (
+          (() => {
+            const active = pathname === "/people" || pathname.startsWith("/people");
+            return (
+              <Link href="/people"
+                className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] ${active ? "bg-accent-subtle font-medium text-accent" : "text-muted-foreground hover:bg-muted"}`}>
+                <Shield className="h-[17px] w-[17px]" />
+                People
+              </Link>
+            );
+          })()
+        ) : null}
       </nav>
       <div className="mt-auto flex items-center gap-2 border-t border-border px-2 py-2">
         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-[11px] font-medium text-accent-foreground">
