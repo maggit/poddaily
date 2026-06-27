@@ -6,6 +6,7 @@ import { listConnectedUserIds } from "@poddaily/db";
 import { db } from "@/lib/db";
 import { createSlackClient } from "@poddaily/slack-client";
 import { enqueueLateJoinIfOpen } from "@/lib/late-join";
+import { requireTeamEdit, getCurrentUser, canEditTeam } from "@/lib/authz";
 import { PageHeader } from "@/components/page-header";
 import { MemberTable } from "@/components/teams/member-table";
 import { AddMemberForm } from "@/components/teams/add-member-form";
@@ -19,6 +20,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
 
   async function addMemberAction(fd: FormData) {
     "use server";
+    await requireTeamEdit(id);
     const slackUserId = String(fd.get("slackUserId") ?? "").trim();
     const slackDisplayName = String(fd.get("slackDisplayName") ?? "").trim();
     const timezone = String(fd.get("timezone") ?? "UTC");
@@ -39,6 +41,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
   }
   async function setPermAction(fd: FormData) {
     "use server";
+    await requireTeamEdit(id);
     const memberId = String(fd.get("memberId"));
     await setMemberPermissions(memberId, {
       canView: fd.get("canView") === "true",
@@ -54,9 +57,13 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
   }
   async function removeAction(fd: FormData) {
     "use server";
+    await requireTeamEdit(id);
     await removeMember(String(fd.get("memberId")));
     revalidatePath(`/teams/${id}`);
   }
+
+  const me = await getCurrentUser();
+  const editable = await canEditTeam(me, id);
 
   return (
     <div className="space-y-6">
@@ -68,8 +75,8 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
       </div>
       <section className="space-y-3">
         <h2 className="text-[15px] font-medium">Members</h2>
-        <MemberTable members={members} connectedUserIds={connectedUserIds} setPermAction={setPermAction} removeAction={removeAction} />
-        <AddMemberForm action={addMemberAction} />
+        <MemberTable members={members} connectedUserIds={connectedUserIds} editable={editable} setPermAction={setPermAction} removeAction={removeAction} />
+        {editable ? <AddMemberForm action={addMemberAction} /> : null}
       </section>
     </div>
   );
