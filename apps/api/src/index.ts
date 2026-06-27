@@ -4,6 +4,7 @@ import { createDb } from "@poddaily/db";
 import { createSlackClient } from "@poddaily/slack-client";
 import { QUEUE_NAME, type RetriggerJob } from "@poddaily/shared";
 import { handleMessage } from "./handleMessage";
+import { handleCommand } from "./handleCommand";
 
 const { db } = createDb();
 const slack = createSlackClient();
@@ -25,6 +26,16 @@ app.message(async ({ message }) => {
   const m = message as { subtype?: string; channel_type?: string; user?: string; channel: string; text?: string };
   if (m.subtype !== undefined || m.channel_type !== "im" || !m.user || !m.text) return;
   await handleMessage({ db, slack, secret, makeUserSlack, enqueueRetrigger }, { slackUserId: m.user, channel: m.channel, text: m.text });
+});
+
+// /standup [start|status|help] — discoverable on-demand standup control. Bolt routes slash
+// commands through the same /slack/events endpoint as message.im. ack(reply) → ephemeral.
+app.command("/standup", async ({ ack, command }) => {
+  const reply = await handleCommand(
+    { db, enqueueRetrigger },
+    { slackUserId: command.user_id, text: command.text, channel: command.channel_id },
+  );
+  await ack(reply);
 });
 
 const port = Number(process.env.PORT ?? 3001);
