@@ -15,6 +15,7 @@ describe("schema", () => {
     for (const t of [
       "teams", "team_members", "standups", "standup_runs",
       "standup_reports", "slack_user_tokens", "standup_reminders",
+      "app_users", "team_managers",
     ]) {
       expect(names).toContain(t);
     }
