@@ -87,4 +87,15 @@ describe("getMemberDayState", () => {
     const st = await getMemberDayState(db, USER);
     expect(st.kind).toBe("pending");
   });
+
+  it("returns paused when the standup is inactive", async () => {
+    await sql`update standups set is_active = false where id = ${standupId}`;
+    try {
+      const st = await getMemberDayState(db, USER);
+      expect(st.kind).toBe("paused");
+      expect(st.standup?.id).toBe(standupId);
+    } finally {
+      await sql`update standups set is_active = true where id = ${standupId}`;
+    }
+  });
 });

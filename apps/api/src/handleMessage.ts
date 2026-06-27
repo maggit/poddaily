@@ -225,6 +225,10 @@ async function maybeRetrigger(deps: HandleMessageDeps, msg: IncomingDm): Promise
     await slack.postMessage(msg.channel, "Your team has no standup configured yet.");
     return;
   }
+  if (state.kind === "paused") {
+    await slack.postMessage(msg.channel, "This standup is paused — ask an admin to resume it.");
+    return;
+  }
   if (state.kind === "completed") {
     await slack.postMessage(msg.channel, "You've already reported today ✅");
     return;

@@ -333,6 +333,21 @@ describe("handleMessage", () => {
     expect(slack.posts.at(-1)?.text).toContain("already reported");
   });
 
+  it("replies paused (no enqueue) when the standup is inactive", async () => {
+    await sql`delete from standup_reports where slack_user_id = ${USER}`;
+    await sql`update standups set is_active = false where team_id in (select id from teams where slack_channel_id = ${CHAN})`;
+    try {
+      const calls: any[] = [];
+      const enqueueRetrigger = async (job: any) => { calls.push(job); };
+      const slack = fakeSlack();
+      await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger, makeUserSlack }, { slackUserId: USER, channel: DM, text: "standup" });
+      expect(calls).toHaveLength(0);
+      expect(slack.posts.at(-1)?.text).toContain("paused");
+    } finally {
+      await sql`update standups set is_active = true where team_id in (select id from teams where slack_channel_id = ${CHAN})`;
+    }
+  });
+
   it("ignores a non-keyword stray DM with no open report", async () => {
     await sql`delete from standup_reports where slack_user_id = ${USER}`;
     const calls: any[] = [];

@@ -19,6 +19,7 @@ const NOT_SET_UP = "You're not set up for standups yet — ask an admin to add y
 const ALREADY_REPORTED = "You've already reported today ✅ — run `/standup status` to review.";
 const IN_PROGRESS_START = "You've got a standup in progress — check your DMs to finish. ⏳";
 const STARTING = "📋 Starting your standup — check your DMs.";
+const PAUSED = "⏸️ This standup is paused — ask an admin to resume it.";
 
 const HELP = [
   "*poddaily standup commands*",
@@ -49,6 +50,8 @@ export function formatStatus(state: MemberDayState): string {
       return `⏳ In progress — ${state.answered} of ${state.total} answered. Check your DMs to finish.`;
     case "pending":
       return "You haven't reported today yet — run `/standup` to start.";
+    case "paused":
+      return PAUSED;
   }
 }
 
@@ -64,6 +67,8 @@ export async function handleCommand(deps: HandleCommandDeps, cmd: SlashCommand):
     case "not_member":
     case "no_standup":
       return NOT_SET_UP;
+    case "paused":
+      return PAUSED;
     case "completed":
       return ALREADY_REPORTED;
     case "in_progress":

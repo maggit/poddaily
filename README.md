@@ -144,7 +144,8 @@ conversation happens in the bot DM as usual.
 The `start` subcommand reuses the existing retrigger worker — it opens today's run if needed and
 sends the standup intro + first question to your DM exactly as the DM keyword (`redo`/`start`/…)
 does. If you've already reported today, it says so and does nothing (consistent with the DM keyword
-behavior).
+behavior). If the standup is **paused**, both `start` and `status` tell you so (and `start` does
+nothing) rather than pretending to send a DM.
 
 **Deploy step.** After deploying, **update the Slack app from `app_manifest.yaml`** (Slack app
 config → App Manifest → paste the updated YAML → Save) so the `/standup` command registers and
