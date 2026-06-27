@@ -11,6 +11,7 @@ adds a discoverable `/standup` slash command, invokable from any channel, with t
 
 - **`/standup start`** (and bare `/standup`) — start/restart my standup now.
 - **`/standup status`** — show whether I've reported today.
+- **`/standup help`** — list the available commands.
 
 **In scope:** the slash-command front door over the *existing* retrigger machinery; an ephemeral
 status read; manifest registration; tests.
@@ -22,7 +23,7 @@ amending an already-submitted report, any change to the DM Q&A engine or the wor
 
 | Decision | Choice |
 |---|---|
-| Subcommands | `start` (and bare `/standup`) + `status`; unknown text → usage hint |
+| Subcommands | `start` (and bare `/standup`), `status`, `help`; unknown text → help |
 | Already-completed start | **Block** with a nudge — no re-DM, no re-broadcast (consistent with the DM keyword) |
 | Status detail | **Three-state**: completed / in-progress (N of M) / not-reported-yet |
 | On-demand timing | Start **bypasses the schedule** (opens a run any day/time) — reuses retrigger's `ensureRunOpen` + team recovery |
@@ -85,11 +86,21 @@ optional, omit it. No behavior depends on this value for the start path.
 | `in_progress` | "⏳ In progress — {answered} of {total} answered. Check your DMs to finish." |
 | `pending` | "You haven't reported today yet — run `/standup` to start." |
 
-### 3.4 Unknown subcommand
+### 3.4 `/standup help` (and unknown subcommands)
 
-`/standup <anything other than start/status/empty>` → "Try `/standup` to start, or `/standup status`."
+`/standup help` — and any unrecognized subcommand — replies with the command list so users can
+discover what's available:
 
-Parsing: `text.trim().toLowerCase()`; `"" | "start"` → start; `"status"` → status; else → usage.
+```
+*poddaily standup commands*
+• `/standup` or `/standup start` — start your standup now
+• `/standup status` — check whether you've reported today
+• `/standup help` — show this message
+```
+
+Parsing: `text.trim().toLowerCase()`; `"" | "start"` → start; `"status"` → status; `"help"` → help;
+anything else → help. Routing unknown input to help (rather than a terse error) makes the command
+self-documenting.
 
 ## 4. Architecture
 
@@ -97,7 +108,9 @@ Parsing: `text.trim().toLowerCase()`; `"" | "start"` → start; `"status"` → s
   returns the ephemeral reply text. Resolves state via `getMemberDayState`, parses the subcommand,
   decides enqueue-vs-message. Dependency-injection shape mirrors `handleMessage`
   (`{ db, enqueueRetrigger }`). Pure formatting/parsing split into small testable functions
-  (`parseSubcommand`, `formatStatus`, `formatStartResult`).
+  (`parseSubcommand`, `formatStatus`, `formatStartResult`, `formatHelp`). `formatHelp` takes no
+  state and returns the static command list; `parseSubcommand` returns `"start" | "status" | "help"`
+  (unknown → `"help"`).
 - **`getMemberDayState`** — new shared query helper (in `apps/api/src/`, e.g. `standupState.ts`),
   consumed by both `handleCommand` and `maybeRetrigger` (see §6 cleanup).
 - **Wire in `apps/api/src/index.ts`**:
@@ -144,7 +157,7 @@ agree; no behavior change to the DM keyword.
       - command: /standup
         url: https://poddaily.example.com/api/slack/events   # same endpoint as message events
         description: Start your standup, or check your status
-        usage_hint: "[status]"
+        usage_hint: "[status|help]"
         should_escape: false
   ```
 
@@ -157,15 +170,15 @@ agree; no behavior change to the DM keyword.
 
 **Tests** (mirror `apps/api/src/handleMessage.test.ts` — `fakeSlack`, injected deps, direct DB):
 
-- Pure unit: `parseSubcommand` (empty/start/status/unknown, case + whitespace); `formatStatus` and
-  `formatStartResult` for every state.
+- Pure unit: `parseSubcommand` (empty/start/status/help/unknown→help, case + whitespace);
+  `formatStatus` and `formatStartResult` for every state; `formatHelp` lists all three commands.
 - `handleCommand` with injected `db` + fake `enqueueRetrigger`:
   - `not_member` → not-set-up reply, **no** enqueue.
   - `completed` → block nudge, **no** enqueue.
   - `in_progress` → check-DMs reply (status shows N of M), **no** enqueue.
   - `pending` → "starting" reply **and** one `enqueueRetrigger` with the right `standupId`/user.
   - `status` variants → correct text per state.
-  - unknown subcommand → usage hint.
+  - `help` and unknown subcommand → command-list reply, **no** enqueue.
 - Smoke: a `/standup` happy path (member with no report today → enqueues retrigger) added to an
   api smoke test + script.
 
