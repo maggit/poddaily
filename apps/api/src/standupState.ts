@@ -6,7 +6,7 @@ import type { createDb } from "@poddaily/db";
 type Db = ReturnType<typeof createDb>["db"];
 
 export type MemberDayStateKind =
-  | "not_member" | "no_standup" | "completed" | "in_progress" | "pending";
+  | "not_member" | "no_standup" | "completed" | "in_progress" | "pending" | "paused";
 
 export interface MemberDayState {
   kind: MemberDayStateKind;
@@ -33,7 +33,7 @@ export async function getMemberDayState(
   if (!member?.teamId) return { kind: "not_member", answered: 0, total: 0 };
 
   const [standup] = await db
-    .select({ id: schema.standups.id, scheduleTz: schema.standups.scheduleTz, questions: schema.standups.questions })
+    .select({ id: schema.standups.id, scheduleTz: schema.standups.scheduleTz, questions: schema.standups.questions, isActive: schema.standups.isActive })
     .from(schema.standups)
     .where(eq(schema.standups.teamId, member.teamId));
   if (!standup) {
@@ -46,6 +46,10 @@ export async function getMemberDayState(
     standup: { id: standup.id, scheduleTz: standup.scheduleTz },
     total,
   };
+
+  // A paused standup (is_active = false) can't be started — the worker drops the retrigger.
+  // Surface it honestly so the user isn't told to "check your DMs" for a DM that never comes.
+  if (standup.isActive === false) return { ...base, kind: "paused", answered: 0 };
 
   const todayDate = anchorDate(standup.scheduleTz, now);
   const [todayRun] = await db

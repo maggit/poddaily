@@ -57,6 +57,7 @@ describe("formatStatus / formatHelp (pure)", () => {
     expect(formatStatus(state("pending"))).toContain("haven't reported today");
     expect(formatStatus(state("not_member"))).toContain("not set up");
     expect(formatStatus(state("no_standup"))).toContain("not set up");
+    expect(formatStatus(state("paused"))).toContain("paused");
   });
   it("help lists all three commands", () => {
     const h = formatHelp();
@@ -119,5 +120,28 @@ describe("handleCommand", () => {
     const reply = await handleCommand({ db, ...r }, { slackUserId: "U_HC_STRANGER", text: "", channel: DM });
     expect(reply).toContain("not set up");
     expect(r.jobs).toHaveLength(0);
+  });
+
+  it("start when the standup is paused blocks and does not enqueue", async () => {
+    await sql`update standups set is_active = false where id = ${standupId}`;
+    try {
+      const r = recorder();
+      const reply = await handleCommand({ db, ...r }, cmd("start"));
+      expect(reply).toContain("paused");
+      expect(r.jobs).toHaveLength(0);
+    } finally {
+      await sql`update standups set is_active = true where id = ${standupId}`;
+    }
+  });
+
+  it("status when the standup is paused says paused", async () => {
+    await sql`update standups set is_active = false where id = ${standupId}`;
+    try {
+      const r = recorder();
+      const reply = await handleCommand({ db, ...r }, cmd("status"));
+      expect(reply).toContain("paused");
+    } finally {
+      await sql`update standups set is_active = true where id = ${standupId}`;
+    }
   });
 });
