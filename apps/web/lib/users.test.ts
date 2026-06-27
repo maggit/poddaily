@@ -20,7 +20,6 @@ afterAll(async () => { await wipe(); await sql.end(); });
 
 describe("app_users data access", () => {
   it("provisions the first user as admin only while no admin exists", async () => {
-    // Pretend the table already has an admin so bootstrap does NOT fire here.
     await provisionUserOnLogin({ slackUserId: U1, displayName: "One", email: "one@x.io" });
     // U1 is the first user in a fresh wipe with zero admins -> admin
     expect((await getAppUser(U1))?.role).toBe("admin");

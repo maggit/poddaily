@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { Users, ListChecks, MessageSquare, Settings, Shield, type LucideIcon } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/nav";
 
-const ICONS: Record<string, LucideIcon> = { Users, ListChecks, MessageSquare, Settings, Shield };
+const ICONS: Record<string, LucideIcon> = { Users, ListChecks, MessageSquare, Settings };
 
 export function Sidebar({ userName, isAdmin }: { userName?: string; isAdmin?: boolean }) {
   const pathname = usePathname();
