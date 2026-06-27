@@ -34,5 +34,9 @@ export const authConfig = {
     authorized({ auth }) {
       return !!auth?.user;
     },
+    session({ session, token }) {
+      if (token.sub && session.user) session.user.id = token.sub;
+      return session;
+    },
   },
 } satisfies NextAuthConfig;
