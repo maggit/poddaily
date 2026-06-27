@@ -6,10 +6,12 @@ import { listConnectedUserIds } from "@poddaily/db";
 import { db } from "@/lib/db";
 import { createSlackClient } from "@poddaily/slack-client";
 import { enqueueLateJoinIfOpen } from "@/lib/late-join";
-import { requireTeamEdit, getCurrentUser, canEditTeam } from "@/lib/authz";
+import { requireTeamEdit, requireAdmin, getCurrentUser, canEditTeam } from "@/lib/authz";
+import { listTeamManagers, listManagerCandidates, addTeamManager, removeTeamManager } from "@/lib/users";
 import { PageHeader } from "@/components/page-header";
 import { MemberTable } from "@/components/teams/member-table";
 import { AddMemberForm } from "@/components/teams/add-member-form";
+import { ManagersSection } from "@/components/teams/managers-section";
 
 export default async function TeamDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -61,9 +63,24 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
     await removeMember(String(fd.get("memberId")));
     revalidatePath(`/teams/${id}`);
   }
+  async function assignManagerAction(fd: FormData) {
+    "use server";
+    await requireAdmin();
+    const slackUserId = String(fd.get("slackUserId") ?? "").trim();
+    if (slackUserId) await addTeamManager(id, slackUserId);
+    revalidatePath(`/teams/${id}`);
+  }
+  async function unassignManagerAction(fd: FormData) {
+    "use server";
+    await requireAdmin();
+    await removeTeamManager(id, String(fd.get("slackUserId") ?? ""));
+    revalidatePath(`/teams/${id}`);
+  }
 
   const me = await getCurrentUser();
   const editable = await canEditTeam(me, id);
+  const managers = me?.role === "admin" ? await listTeamManagers(id) : [];
+  const managerCandidates = me?.role === "admin" ? await listManagerCandidates() : [];
 
   return (
     <div className="space-y-6">
@@ -78,6 +95,14 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
         <MemberTable members={members} connectedUserIds={connectedUserIds} editable={editable} setPermAction={setPermAction} removeAction={removeAction} />
         {editable ? <AddMemberForm action={addMemberAction} /> : null}
       </section>
+      {me?.role === "admin" ? (
+        <ManagersSection
+          managers={managers}
+          candidates={managerCandidates}
+          addAction={assignManagerAction}
+          removeAction={unassignManagerAction}
+        />
+      ) : null}
     </div>
   );
 }
