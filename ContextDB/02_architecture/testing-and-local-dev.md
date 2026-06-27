@@ -68,7 +68,7 @@ smoke tests. It:
 - **Records** outbound Web API calls (`conversations.open`, `chat.postMessage`,
   `users.info`, `oauth.v2.access`, …) so the test can assert what the bot/user "posted".
 - **Injects** inbound events — a helper posts a signed `message.im` payload to
-  `POST /api/slack/events`, simulating a user's DM reply (signature computed with
+  `POST /slack/events`, simulating a user's DM reply (signature computed with
   `SLACK_SIGNING_SECRET` so the real verification middleware runs).
 - **Stubs tokens** — returns canned `oauth.v2.access` responses so the reporter user-OAuth
   flow can complete without a browser.

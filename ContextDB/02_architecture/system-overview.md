@@ -48,7 +48,7 @@ therefore omits a `postgres` service and `pgdata` volume; it keeps `web`, `api`,
    `send-standup-dm` job per member scheduled to that member's local send time.
 2. **send-standup-dm** — opens a Slack DM, posts intro + first question, writes an
    `in_progress` `standup_reports` row.
-3. **api/slack** — each user reply hits `POST /api/slack/events` (`message.im`). The handler
+3. **api/slack** — each user reply hits `POST /slack/events` (`message.im`). The handler
    reconstructs progress from `standup_reports.answers`, persists the answer, and posts the
    next question. On the last answer it marks the report `completed` and triggers broadcast.
 4. **broadcast** — posts/looks up the run's opening thread message, then posts the user's

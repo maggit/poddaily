@@ -106,7 +106,7 @@ When `apps/api` + `apps/worker` land:
 - `api` gets a public domain (Slack events/OAuth request URLs point at it); `worker` has no
   public port.
 - Share `DATABASE_URL`, `INTERNAL_API_SECRET`, `SLACK_*` across the services as needed.
-- Update the Slack app's event request URL to `https://<api-domain>/api/slack/events`.
+- Update the Slack app's event request URL to `https://<api-domain>/slack/events`.
 
 ## Local vs deploy
 
