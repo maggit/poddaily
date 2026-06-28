@@ -5,6 +5,7 @@ import { getStandup, upsertStandup, setStandupActive } from "@/lib/standups";
 import { requireTeamEdit, getCurrentUser, canEditTeam } from "@/lib/authz";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
+import type { ActionState } from "@/components/ui/form";
 import { StandupForm } from "@/components/standups/standup-form";
 import { DEFAULT_QUESTIONS, cronFromWeekly, parseWeeklyCron, type Question } from "@poddaily/shared";
 
@@ -23,25 +24,29 @@ export default async function StandupConfigPage({ params }: { params: Promise<{ 
   const outroMessage = standup?.outroMessage ?? "Thanks for your update!";
   const reminderIntervalMinutes = standup?.reminderIntervalMinutes ?? 60;
 
-  async function saveAction(fd: FormData) {
+  async function saveAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
     "use server";
     await requireTeamEdit(id);
     const parsedQuestions = JSON.parse(String(fd.get("questions") ?? "[]")) as Question[];
     const cleaned = parsedQuestions.map((q) => ({ ...q, text: q.text.trim() })).filter((q) => q.text.length > 0);
     const weekdayNums = String(fd.get("weekdays") ?? "").split(",").filter(Boolean).map(Number);
     const [h, m] = String(fd.get("time") ?? "10:00").split(":").map(Number);
-    if (cleaned.length === 0) throw new Error("At least one question is required");
-    if (weekdayNums.length === 0) throw new Error("Pick at least one weekday");
-    if (Number.isNaN(h) || Number.isNaN(m)) throw new Error("A valid time is required");
+    if (cleaned.length === 0) return { error: "Add at least one question." };
+    if (weekdayNums.length === 0) return { error: "Pick at least one weekday." };
+    if (Number.isNaN(h) || Number.isNaN(m)) return { error: "Enter a valid time." };
     const reminderIntervalMinutes = Math.max(0, Math.floor(Number(fd.get("reminderIntervalMinutes") ?? 60)) || 0);
-    await upsertStandup(id, {
-      questions: cleaned,
-      scheduleCron: cronFromWeekly({ weekdays: weekdayNums, hour: h, minute: m }),
-      scheduleTz: String(fd.get("scheduleTz") ?? "America/Mexico_City"),
-      introMessage: String(fd.get("introMessage") ?? ""),
-      outroMessage: String(fd.get("outroMessage") ?? ""),
-      reminderIntervalMinutes,
-    });
+    try {
+      await upsertStandup(id, {
+        questions: cleaned,
+        scheduleCron: cronFromWeekly({ weekdays: weekdayNums, hour: h, minute: m }),
+        scheduleTz: String(fd.get("scheduleTz") ?? "America/Mexico_City"),
+        introMessage: String(fd.get("introMessage") ?? ""),
+        outroMessage: String(fd.get("outroMessage") ?? ""),
+        reminderIntervalMinutes,
+      });
+    } catch (err) {
+      return { error: (err as Error).message || "Could not save the standup." };
+    }
     revalidatePath(`/teams/${id}/standup`);
     redirect(`/teams/${id}`);
   }
@@ -58,30 +63,39 @@ export default async function StandupConfigPage({ params }: { params: Promise<{ 
   const editable = await canEditTeam(await getCurrentUser(), id);
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={`${team.name} · Standup`} />
-      {standup ? (
-        <div className="flex items-center gap-3">
-          <StatusPill tone={standup.isActive === false ? "neutral" : "success"}>
-            {standup.isActive === false ? "Paused" : "Active"}
-          </StatusPill>
-          {editable ? (
-            <form action={toggleActiveAction}>
-              <button type="submit" className="text-[13px] font-medium text-accent hover:underline">
-                {standup.isActive === false ? "Resume standup" : "Pause standup"}
-              </button>
-            </form>
-          ) : null}
-        </div>
-      ) : null}
-      {editable ? (
-        <StandupForm
-          action={saveAction}
-          questions={questions}
-          weekdays={weekdays} hour={hour} minute={minute} tz={tz}
-          introMessage={introMessage} outroMessage={outroMessage}
-          reminderIntervalMinutes={reminderIntervalMinutes}
+    <div className="space-y-7">
+      <div className="reveal">
+        <PageHeader
+          eyebrow="Configure standup"
+          title={team.name}
+          actions={
+            standup ? (
+              <div className="flex items-center gap-3">
+                <StatusPill tone={standup.isActive === false ? "neutral" : "success"}>
+                  {standup.isActive === false ? "Paused" : "Active"}
+                </StatusPill>
+                {editable ? (
+                  <form action={toggleActiveAction}>
+                    <button type="submit" className="text-[13px] font-medium text-accent transition-opacity hover:opacity-80">
+                      {standup.isActive === false ? "Resume" : "Pause"}
+                    </button>
+                  </form>
+                ) : null}
+              </div>
+            ) : null
+          }
         />
+      </div>
+      {editable ? (
+        <div className="reveal" style={{ animationDelay: "80ms" }}>
+          <StandupForm
+            action={saveAction}
+            questions={questions}
+            weekdays={weekdays} hour={hour} minute={minute} tz={tz}
+            introMessage={introMessage} outroMessage={outroMessage}
+            reminderIntervalMinutes={reminderIntervalMinutes}
+          />
+        </div>
       ) : (
         <p className="text-sm text-muted-foreground">You have read-only access to this standup.</p>
       )}

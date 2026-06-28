@@ -18,6 +18,14 @@ every UI build step. It synthesizes three references the owner provided:
 **Core principle:** Resend's restraint and polish, carrying Steady's standup-native components,
 laid out with the reference admin information density.
 
+> ⚠️ **Updated 2026-06-27 — "Crisp Product" polish pass.** The accent, type, elevation, and
+> motion decisions below were revised after a Clerk/Hex-referenced redesign. The sections from
+> here to "Provenance" are the **original 2026-06-16 direction** and are kept for history; where
+> they conflict with the current system, **[Polish pass — 2026-06-27](#polish-pass--2026-06-27-crisp-product) at the
+> bottom of this file is authoritative.** Headline deltas: indigo `#6366F1` → cobalt `#2D5BFF`;
+> Instrument Serif display → Schibsted Grotesk (all-grotesk, no serif); flat/no-shadow → layered
+> depth tokens; added staggered load-reveal motion.
+
 ## Theme split (decided)
 
 - **Auth / marketing (`/login`)** → **dark**, premium, serif display moment.
@@ -158,3 +166,87 @@ This is the path for the later "polish" pass — change tokens/components in pla
 Owner-provided references on 2026-06-16: Resend screenshots (Mobbin), a Steady/Status Hero
 check-ins screenshot, and a 4.5s Steady walkthrough clip (team-tab navigation + feed + stats
 rail + roster). Stored as the basis for [phase-1-core-spec.md](../01_specs/phase-1-core-spec.md) §8 UI.
+
+---
+
+## Polish pass — 2026-06-27 (Crisp Product)
+
+**This section is authoritative** where it conflicts with the original direction above.
+References: Clerk + Hex admin dashboards (owner-provided via Mobbin). Direction chosen:
+**Crisp product** — cool-white canvas, true-black ink, an all-grotesk type system, and a single
+saturated **cobalt** accent used sparingly. Goal: a refined, "designed" SaaS-admin feel without
+the indigo-on-zinc generic look.
+
+### What changed vs. the original direction
+| Area | Was (2026-06-16) | Now (2026-06-27) |
+|---|---|---|
+| Brand accent | indigo `#6366F1` | **cobalt `#2D5BFF`** (`--accent-strong` `#1D44D6` for hover) |
+| Display type | Instrument **Serif** | **Schibsted Grotesk** (`--font-display`) — no serif |
+| Primary button | solid black | unchanged (black); cobalt reserved for active nav / links / focus / the `accent` button variant |
+| Elevation | flat, hairline only | **layered shadow tokens** (`--shadow-xs/sm/card/md/lg`) on cards, tables, inputs |
+| Motion | hover/route fade only | added **staggered load reveal** (`.reveal` + inline `animation-delay`) |
+| Canvas | `#FFFFFF` | app bg `#FAFAFA`, cards `#FFFFFF` (crisp separation) |
+| Borders | `#E4E4E7` | `#EBEBEF` (lighter/crisper) |
+
+### Tokens (current, light `:root`)
+`--background #FAFAFA` · `--card #FFFFFF` · `--foreground #0A0A0B` · `--muted-foreground #6B6B76`
+· `--subtle-foreground #9B9BA6` · `--border #EBEBEF` · `--input #E6E6EB` · `--accent #2D5BFF` ·
+`--accent-strong #1D44D6` · `--accent-subtle #ECF1FF` · `--ring #2D5BFF` · `--radius 0.625rem`.
+Status families (`success/warning/danger` + `-subtle`/`-foreground`) retuned for crispness.
+Dark theme (`.dark`, used by `/login`) mirrors these with a lighter cobalt `#5B82FF`.
+Depth tints: `--shadow-tint` / `--shadow-tint-strong` drive all shadow tokens.
+
+### Type
+- **Body / UI:** Geist Sans — wired via `--font-sans` (**bugfix:** the variable was previously a
+  circular self-reference, so the app silently rendered in system fonts).
+- **Display / headings (`h1–h3`, page titles, brand, stat numbers):** Schibsted Grotesk via
+  `--font-heading`; `-0.02em` tracking. Use the `.font-heading` utility to opt other elements in.
+- **Mono:** Geist Mono — IDs, Slack handles, channel names.
+- Instrument Serif was **removed** from `app/layout.tsx`.
+
+### Depth & motion
+- Cards/tables/inputs use `shadow-card` / `shadow-xs`; overlays would use `shadow-md/lg`.
+- `.reveal` animates opacity + 8px rise (`cubic-bezier(0.22,1,0.36,1)`, 0.5s), respects
+  `prefers-reduced-motion`. Stagger lists with inline `style={{ animationDelay: \`${i*50}ms\` }}`.
+
+### Shared primitives (new — reuse these, don't re-style inline)
+- **`components/ui/form.tsx`** — `Field`, `Label`, `Input`, `Textarea`, `Select` (white field +
+  cobalt focus ring via `fieldClass`), plus `Card` and `SectionTitle`. All forms consume these.
+- **`components/ui/empty-state.tsx`** — `EmptyState` (icon tile + title + description + action).
+- **`components/page-header.tsx`** — now supports `eyebrow` + `description` (28px display title).
+- **`components/ui/button.tsx`** — added an **`accent`** (cobalt) variant; taller `default`/`lg`.
+- **`components/ui/status-pill.tsx`** — leading status dot + inset ring.
+- **`components/ui/data-table.tsx`** — elevated, row hover `surface-muted/60`.
+- **App shell:** `sidebar.tsx` (grouped Workspace/Manage sections, active accent bar, account
+  card) and `top-bar.tsx` (sticky, blur, route-derived breadcrumb, ⌘K affordance).
+
+The single-file reskin path still holds: all tokens live in `apps/web/app/globals.css`
+(`:root` light, `.dark` for `/login`); components use only semantic classes. Change `--accent`
+once → every active state updates.
+
+### Resolved in follow-up (2026-06-27)
+- ✅ **Dead nav links** — built `/standups` (per-team schedule/status index) and `/settings`
+  (read-only account + role/access + sign-out). Both nav items now resolve.
+- ✅ **Loading / page error UX** — added `(dashboard)/loading.tsx` (skeleton matching the page
+  shell), `(dashboard)/error.tsx` (client boundary with retry + digest), and
+  `(dashboard)/not-found.tsx` (friendly 404 for `notFound()` on missing teams/reports).
+- ✅ **Mobile / responsive** — new client `components/app-shell/app-shell.tsx` owns drawer state:
+  `Sidebar` is a static rail on `md+` and a slide-in drawer (backdrop, Esc-to-close, body-scroll
+  lock, route-change close) on mobile, opened by a hamburger in `TopBar`. `DataTable` now scrolls
+  horizontally (`overflow-x-auto`, `min-w-[640px]`) instead of crushing columns; `main` and
+  `TopBar` padding scale down on small screens.
+- ✅ **Form-level error feedback** — `components/ui/form.tsx` adds an `ActionState`/`FormAction`
+  type + `FormError`. The three data-entry forms (Create Team, Add Member, Standup config) use
+  `useActionState`: validation/save failures now render inline (red alert) with a pending/disabled
+  submit button, instead of throwing to the error boundary. Add Member resets on success.
+
+### Still pending
+1. **Dark-mode toggle** — both token sets exist but the product app is light-only; no switcher.
+2. **⌘K search** — top-bar affordance is decorative; no command palette wired.
+3. **Toggle/select action errors** — quick actions (role select, permission toggles, manager
+   assign/remove, pause/resume, member remove) still throw to the error boundary; only the three
+   main forms have inline feedback.
+4. **Richer report visuals** — Steady-style participation bar + stats rail (from the original
+   direction) still not built; reports are cards + table.
+5. **Branding** — favicon / app-icon / OG image.
+6. **Visual QA** — authenticated screens not yet screenshotted (needs live DB + Slack session).

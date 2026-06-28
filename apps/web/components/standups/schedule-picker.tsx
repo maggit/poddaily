@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { WEEKDAYS, COMMON_TIMEZONES } from "@poddaily/shared";
+import { Field, Input, Select } from "@/components/ui/form";
 
 export function SchedulePicker({
   initialWeekdays, initialHour, initialMinute, initialTz,
@@ -16,28 +17,38 @@ export function SchedulePicker({
   return (
     <div className="space-y-4">
       <input type="hidden" name="weekdays" value={days.join(",")} readOnly />
-      <div className="flex flex-wrap gap-2">
-        {WEEKDAYS.map((d) => {
-          const on = days.includes(d.value);
-          return (
-            <button key={d.value} type="button" onClick={() => toggle(d.value)}
-              className={`h-9 w-12 rounded-lg border text-[13px] font-medium ${on ? "border-accent bg-accent-subtle text-accent" : "border-input bg-background text-muted-foreground hover:bg-muted"}`}>
-              {d.label}
-            </button>
-          );
-        })}
+      <div className="space-y-1.5">
+        <span className="block text-[13px] font-medium text-foreground">Days</span>
+        <div className="flex flex-wrap gap-1.5">
+          {WEEKDAYS.map((d) => {
+            const on = days.includes(d.value);
+            return (
+              <button
+                key={d.value}
+                type="button"
+                onClick={() => toggle(d.value)}
+                aria-pressed={on}
+                className={`h-9 w-12 rounded-lg border text-[13px] font-medium transition-colors ${
+                  on
+                    ? "border-accent bg-accent text-accent-foreground shadow-sm"
+                    : "border-input bg-card text-muted-foreground shadow-xs hover:bg-surface-muted hover:text-foreground"
+                }`}
+              >
+                {d.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
       <div className="flex flex-wrap items-end gap-3">
-        <label className="space-y-1.5">
-          <span className="block text-[13px] font-medium">Time</span>
-          <input type="time" name="time" defaultValue={time} className="h-9 w-32 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring" />
-        </label>
-        <label className="space-y-1.5">
-          <span className="block text-[13px] font-medium">Default timezone</span>
-          <select name="scheduleTz" defaultValue={initialTz} className="h-9 w-48 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring">
+        <Field label="Time" className="w-32">
+          <Input type="time" name="time" defaultValue={time} />
+        </Field>
+        <Field label="Default timezone" className="w-56">
+          <Select name="scheduleTz" defaultValue={initialTz}>
             {COMMON_TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
-          </select>
-        </label>
+          </Select>
+        </Field>
       </div>
     </div>
   );
