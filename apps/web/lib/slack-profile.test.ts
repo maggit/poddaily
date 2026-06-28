@@ -18,13 +18,18 @@ describe("mapSlackProfile", () => {
     });
   });
 
-  it("falls back to the slack user_id claim when sub is absent", () => {
+  it("prefers the stable slack user_id claim over a rotating sub", () => {
     const user = mapSlackProfile({
-      name: "Grace",
-      email: "grace@example.com",
-      picture: "https://img/g.png",
-      "https://slack.com/user_id": "U999",
+      sub: "257dbbac-3090-4284-b3c0-93f39555cd4f", // opaque/rotating — must NOT be used
+      name: "Raquel",
+      email: "raquel@example.com",
+      "https://slack.com/user_id": "U0123ABCD",
     });
+    expect(user.id).toBe("U0123ABCD");
+  });
+
+  it("falls back to sub when the user_id claim is absent", () => {
+    const user = mapSlackProfile({ sub: "U999", name: "Grace", email: "grace@example.com" });
     expect(user.id).toBe("U999");
   });
 });
