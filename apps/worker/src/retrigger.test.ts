@@ -14,6 +14,7 @@ function fakeSlack() {
     postMessage: async (channel: string, text: string) => { posts.push({ channel, text }); return "ts_rt"; },
     updateMessage: async () => {},
     getUserProfile: async () => ({ image: null, tz: null, realName: null }),
+    listAllUsers: async () => [],
   };
 }
 function fakeEnqueueTimeout() {

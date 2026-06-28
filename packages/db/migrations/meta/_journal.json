@@ -43,6 +43,13 @@
       "when": 1782523980337,
       "tag": "0005_daily_gressill",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782664662727,
+      "tag": "0006_easy_groot",
+      "breakpoints": true
     }
   ]
 }

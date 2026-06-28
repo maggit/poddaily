@@ -82,10 +82,9 @@ opaque value that **rotates** between logins — not the Slack user id.
    mobile. Confirm: drawer behavior, table horizontal-scroll, form inline errors, loading
    skeletons, the new `/standups` + `/settings`. Screenshot before/after. This is the one thing not
    yet verified by eye.
-2. **Slack member search / autocomplete (requested feature).** Replace manual copy-paste of Slack
-   user IDs in the Add Member form with a searchable, autocompleting picker that can reach **every**
-   user in the workspace (400+ people). Detailed design + suggestions below in
-   [Feature design: Slack member search](#feature-design-slack-member-search).
+2. ✅ **Slack member search / autocomplete — BUILT 2026-06-28.** Implemented per the design below;
+   see [Feature design: Slack member search](#feature-design-slack-member-search) for the
+   "Implemented" notes. Remaining: visual QA of the combobox against a live workspace.
 3. **`UNIQUE(email)` DB constraint (hardening).** Can't be added until prod duplicates are gone
    (migration would fail today). Once logins have settled to one row per person, add a Drizzle
    migration + partial unique index `where email is not null`. Makes duplicate users structurally
@@ -104,6 +103,28 @@ See also the canonical pending list:
 [design-direction.md → Still pending](../04_knowledge/design-direction.md#still-pending).
 
 ## Feature design: Slack member search
+
+> **Status: IMPLEMENTED 2026-06-28.** Built exactly to the architecture below (sync the directory,
+> search locally). Files:
+> - DB: `slack_directory_users` table + `pg_trgm` GIN search index — migration
+>   `packages/db/migrations/0006_easy_groot.sql`; data-access `packages/db/src/directory.ts`
+>   (`upsertDirectoryUsers`, `searchDirectory`, `countDirectoryUsers`).
+> - Slack: `listAllUsers()` (cursor-draining) in `packages/slack-client/src/index.ts`; stub
+>   `users.list` (2 pages) in `tools/slack-stub`.
+> - Worker: `apps/worker/src/syncDirectory.ts`, routed in `processor.ts`; repeatable every 6h +
+>   immediate boot run in `index.ts` (`SYNC_DIRECTORY_JOB`, scheduler `directory-sync` in
+>   `@poddaily/shared`).
+> - Web: `app/api/directory/search/route.ts` (auth-gated); combobox
+>   `components/teams/member-search.tsx` (debounced 200ms, abortable, keyboard nav, avatar rows,
+>   "keep typing to narrow" when capped); wired into `AddMemberForm`; admin "Resync directory"
+>   card on `/settings` (`enqueueDirectorySync`). Manifest already grants `users:read` +
+>   `users:read.email`.
+> - Tests: cursor-drain (slack-client), upsert/search/paginate/empty (db), sync (worker) — all green.
+>
+> **Ops:** migration `0006` runs on deploy; the worker seeds the directory at boot (and every 6h);
+> admins can force a refresh via Settings → Resync directory (needs `REDIS_URL` on web).
+> **Remaining:** visual QA of the combobox against a live workspace; optional "load more"
+> (infinite scroll) in the dropdown — today it shows the top 8 and asks the user to narrow.
 
 **Goal.** In the Add Member form (and anywhere we pick a Slack user), let the admin **search by
 name with autocomplete** instead of pasting a `U…` id. Must surface **every** user in the

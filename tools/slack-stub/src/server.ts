@@ -120,6 +120,23 @@ export function startSlackStub(port = 4010): Promise<SlackStub> {
       return json(200, { ok: true, ts: body.get("ts") ?? "" });
     }
 
+    // Paginated workspace directory — two fixed pages, so cursor-draining is exercised.
+    if (u.pathname === "/api/users.list") {
+      const body = await readBody(req);
+      const cursor = body.get("cursor") ?? "";
+      const PAGE1 = [
+        { id: "U001", tz: "Europe/London", profile: { display_name: "Ada Lovelace", real_name: "Ada Lovelace", email: "ada@stub.local", image_192: "https://stub.local/U001-192.png", image_512: "https://stub.local/U001-512.png" } },
+        { id: "B001", is_bot: true, profile: { display_name: "standupbot", real_name: "standupbot" } },
+      ];
+      const PAGE2 = [
+        { id: "U002", deleted: true, profile: { display_name: "Gone Person", real_name: "Gone Person" } },
+        { id: "U003", tz: "America/New_York", profile: { display_name: "Grace Hopper", real_name: "Grace Hopper", email: "grace@stub.local", image_512: "https://stub.local/U003-512.png" } },
+      ];
+      if (!cursor) return json(200, { ok: true, members: PAGE1, response_metadata: { next_cursor: "PAGE2" } });
+      if (cursor === "PAGE2") return json(200, { ok: true, members: PAGE2, response_metadata: { next_cursor: "" } });
+      return json(200, { ok: true, members: [], response_metadata: { next_cursor: "" } });
+    }
+
     if (u.pathname === "/api/users.info") {
       const body = await readBody(req);
       const user = body.get("user") || "U_STUB";

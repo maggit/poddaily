@@ -1,5 +1,5 @@
 import { Queue } from "bullmq";
-import { QUEUE_NAME, SEND_DM_JOB } from "@poddaily/shared";
+import { QUEUE_NAME, SEND_DM_JOB, SYNC_DIRECTORY_JOB } from "@poddaily/shared";
 import type { SendDmJob } from "@poddaily/shared";
 
 const globalForQueue = globalThis as unknown as { _poddailyQueue?: Queue };
@@ -18,4 +18,9 @@ export async function enqueueSendDm(job: SendDmJob): Promise<void> {
     removeOnComplete: true,
     removeOnFail: false,
   });
+}
+
+/** Enqueue an on-demand workspace directory resync (the worker also runs it on a schedule). */
+export async function enqueueDirectorySync(): Promise<void> {
+  await getQueue().add(SYNC_DIRECTORY_JOB, {}, { removeOnComplete: true, removeOnFail: false });
 }

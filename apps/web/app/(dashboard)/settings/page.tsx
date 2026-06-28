@@ -1,6 +1,10 @@
-import { LogOut, ShieldCheck } from "lucide-react";
-import { getCurrentUser } from "@/lib/authz";
+import { revalidatePath } from "next/cache";
+import { LogOut, ShieldCheck, RefreshCw, Users } from "lucide-react";
+import { countDirectoryUsers } from "@poddaily/db";
+import { getCurrentUser, requireAdmin } from "@/lib/authz";
 import { signOut } from "@/auth";
+import { db } from "@/lib/db";
+import { enqueueDirectorySync } from "@/lib/queue";
 import type { UserRole } from "@poddaily/db/schema";
 import { PageHeader } from "@/components/page-header";
 import { Card, SectionTitle } from "@/components/ui/form";
@@ -25,10 +29,19 @@ function Detail({ label, value }: { label: string; value: React.ReactNode }) {
 
 export default async function SettingsPage() {
   const me = await getCurrentUser();
+  const isAdmin = me?.role === "admin";
+  const directoryCount = isAdmin ? await countDirectoryUsers(db) : 0;
 
   async function signOutAction() {
     "use server";
     await signOut({ redirectTo: "/login" });
+  }
+
+  async function resyncDirectoryAction() {
+    "use server";
+    await requireAdmin();
+    await enqueueDirectorySync();
+    revalidatePath("/settings");
   }
 
   return (
@@ -71,6 +84,26 @@ export default async function SettingsPage() {
               Roles are managed by admins on the People page. Instance configuration (Slack, database,
               scheduler) is set via environment variables — see the project README.
             </p>
+          </Card>
+        ) : null}
+
+        {isAdmin ? (
+          <Card className="space-y-3">
+            <SectionTitle description="Members for the Add-member search are synced from Slack automatically. Resync to pick up new hires or name changes immediately.">
+              Workspace directory
+            </SectionTitle>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                <Users className="h-4 w-4 text-subtle-foreground" />
+                <span className="tabular-nums font-medium text-foreground">{directoryCount}</span> people synced
+              </div>
+              <form action={resyncDirectoryAction}>
+                <Button type="submit" variant="outline">
+                  <RefreshCw className="h-4 w-4" />
+                  Resync directory
+                </Button>
+              </form>
+            </div>
           </Card>
         ) : null}
 
