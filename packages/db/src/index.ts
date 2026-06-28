@@ -1,6 +1,7 @@
 export * as schema from "./schema";
 export { createDb } from "./client";
 export { saveUserToken, getUserToken, hasUserToken, listConnectedUserIds } from "./tokens";
+export { upsertDirectoryUsers, searchDirectory, countDirectoryUsers, type DirectoryMemberInput, type DirectorySearchPage } from "./directory";
 export { finalizeRunIfDone } from "./runs";
 export { lastReportDateBefore } from "./reports";
 

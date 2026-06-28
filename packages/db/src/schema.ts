@@ -101,6 +101,22 @@ export const teamManagers = pgTable("team_managers", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => ({ uniqTeamManager: unique().on(t.teamId, t.slackUserId) }));
 
+// A synced snapshot of the Slack workspace member directory, refreshed by the worker
+// (users.list, fully paginated). Backs the member-search autocomplete so search is local,
+// complete, and fast — Slack has no users.search API. A trigram GIN search index over the
+// name/email expression is added out-of-band in the migration (not expressible in Drizzle).
+export const slackDirectoryUsers = pgTable("slack_directory_users", {
+  slackUserId: text("slack_user_id").primaryKey(),
+  displayName: text("display_name"),
+  realName: text("real_name"),
+  email: text("email"),
+  avatarUrl: text("avatar_url"),
+  tz: text("tz"),
+  isBot: boolean("is_bot").notNull().default(false),
+  deleted: boolean("deleted").notNull().default(false),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
 export type Team = typeof teams.$inferSelect;
 export type NewTeam = typeof teams.$inferInsert;
 export type TeamMember = typeof teamMembers.$inferSelect;
@@ -120,3 +136,5 @@ export type NewAppUser = typeof appUsers.$inferInsert;
 export type UserRole = (typeof userRole.enumValues)[number];
 export type TeamManager = typeof teamManagers.$inferSelect;
 export type NewTeamManager = typeof teamManagers.$inferInsert;
+export type SlackDirectoryUser = typeof slackDirectoryUsers.$inferSelect;
+export type NewSlackDirectoryUser = typeof slackDirectoryUsers.$inferInsert;

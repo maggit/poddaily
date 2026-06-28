@@ -1,6 +1,7 @@
 import { Worker } from "bullmq";
 import { createDb } from "@poddaily/db";
 import { createSlackClient } from "@poddaily/slack-client";
+import { SYNC_DIRECTORY_JOB, DIRECTORY_SYNC_SCHEDULER_ID, DIRECTORY_SYNC_EVERY_MS } from "@poddaily/shared";
 import { QUEUE_NAME, createQueue, redisConnection } from "./queue";
 import { reconcileSchedules } from "./reconcileSchedules";
 import { createProcessor } from "./processor";
@@ -11,6 +12,15 @@ async function main() {
   const queue = createQueue();
 
   await reconcileSchedules(queue, db);
+
+  // Keep the Slack workspace directory fresh for member search: a repeatable sync every
+  // few hours, plus one immediate run at boot so the table populates on first deploy.
+  await queue.upsertJobScheduler(
+    DIRECTORY_SYNC_SCHEDULER_ID,
+    { every: DIRECTORY_SYNC_EVERY_MS },
+    { name: SYNC_DIRECTORY_JOB, data: {} },
+  );
+  await queue.add(SYNC_DIRECTORY_JOB, {}, { removeOnComplete: true, removeOnFail: false });
 
   const worker = new Worker(
     QUEUE_NAME,

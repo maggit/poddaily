@@ -8,7 +8,7 @@ const USER = "U_REMIND";
 
 function fakeSlack() {
   const posts: Array<{ channel: string; text: string }> = [];
-  return { posts, openDm: async () => "D_R", postMessage: async (channel: string, text: string) => { posts.push({ channel, text }); return "ts"; }, updateMessage: async () => {}, getUserProfile: async () => ({ image: null, tz: null, realName: null }) };
+  return { posts, openDm: async () => "D_R", postMessage: async (channel: string, text: string) => { posts.push({ channel, text }); return "ts"; }, updateMessage: async () => {}, getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [] };
 }
 async function cleanup() {
   await sql`delete from standup_reminders where slack_user_id = ${USER}`;

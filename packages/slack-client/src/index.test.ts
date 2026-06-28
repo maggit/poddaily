@@ -58,4 +58,17 @@ describe("slack-client", () => {
     expect(p.tz).toBe("America/New_York");
     expect(p.realName).toBe("Stub User");
   });
+
+  it("listAllUsers drains every page of users.list (not just the first)", async () => {
+    const client = createSlackClient({ baseUrl: stub.url, token: "xoxb-test" });
+    const members = await client.listAllUsers();
+    // 2 stub pages of 2 = 4 members total; the page-2 user must be present.
+    expect(members.map((m) => m.id).sort()).toEqual(["B001", "U001", "U002", "U003"]);
+    const ada = members.find((m) => m.id === "U001")!;
+    expect(ada).toMatchObject({ displayName: "Ada Lovelace", email: "ada@stub.local", tz: "Europe/London" });
+    expect(ada.avatarUrl).toContain("U001-512");
+    expect(members.find((m) => m.id === "B001")?.isBot).toBe(true);
+    expect(members.find((m) => m.id === "U002")?.deleted).toBe(true);
+    expect(members.find((m) => m.id === "U003")?.displayName).toBe("Grace Hopper");
+  });
 });
