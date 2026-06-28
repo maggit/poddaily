@@ -26,36 +26,68 @@ export async function countAdmins(): Promise<number> {
   return row?.n ?? 0;
 }
 
+const ROLE_RANK: Record<UserRole, number> = { viewer: 0, manager: 1, admin: 2 };
+
 /**
- * Upsert the user's profile on login. The first user provisioned while zero admins
- * exist becomes an admin; every other new user defaults to viewer. Existing users
- * keep their role and only have profile + last_login_at refreshed.
+ * Upsert the user's profile on login.
+ *
+ * Identity is keyed on the Slack user id, but reconciled by **email**: a person keeps
+ * a single row even if their stored slack_user_id ever changes (e.g. the historical
+ * bug where Slack's rotating OIDC `sub` was stored instead of the stable user id). If
+ * a login arrives with an id we haven't seen but an email we have, we adopt the
+ * existing row's role (the highest among any duplicates) and drop the stale row(s) —
+ * self-healing duplicate users.
+ *
+ * The first user provisioned while zero admins exist becomes an admin; every other
+ * genuinely new user defaults to viewer. Existing users keep their role and only have
+ * profile + last_login_at refreshed.
  */
 export async function provisionUserOnLogin(input: {
   slackUserId: string; email?: string; displayName?: string; avatarUrl?: string;
 }): Promise<AppUser> {
-  const existing = await getAppUser(input.slackUserId);
-  await db
-    .insert(schema.appUsers)
-    .values({
-      slackUserId: input.slackUserId,
-      email: input.email,
-      displayName: input.displayName,
-      avatarUrl: input.avatarUrl,
-      lastLoginAt: dsql`now()`,
-    })
-    .onConflictDoUpdate({
-      target: schema.appUsers.slackUserId,
-      set: {
+  await db.transaction(async (tx) => {
+    const [byId] = await tx.select().from(schema.appUsers).where(eq(schema.appUsers.slackUserId, input.slackUserId));
+    if (byId) {
+      await tx.update(schema.appUsers).set({
         email: input.email,
         displayName: input.displayName,
         avatarUrl: input.avatarUrl,
         lastLoginAt: dsql`now()`,
-      },
+      }).where(eq(schema.appUsers.slackUserId, input.slackUserId));
+      return;
+    }
+
+    // No row for this Slack id yet — reconcile by email before creating a new one.
+    let role: UserRole = "viewer";
+    let reconciled = false;
+    if (input.email) {
+      const sameEmail = await tx.select().from(schema.appUsers).where(eq(schema.appUsers.email, input.email));
+      if (sameEmail.length > 0) {
+        reconciled = true;
+        role = sameEmail.reduce<UserRole>((best, r) => (ROLE_RANK[r.role] > ROLE_RANK[best] ? r.role : best), "viewer");
+        // Remove the stale row(s); team_managers rows referencing them cascade away.
+        await tx.delete(schema.appUsers).where(inArray(schema.appUsers.slackUserId, sameEmail.map((r) => r.slackUserId)));
+      }
+    }
+
+    // Bootstrap the very first user (only when we're not adopting an existing identity).
+    if (!reconciled) {
+      const [row] = await tx
+        .select({ n: dsql<number>`count(*)::int` })
+        .from(schema.appUsers)
+        .where(eq(schema.appUsers.role, "admin"));
+      if ((row?.n ?? 0) === 0) role = "admin";
+    }
+
+    await tx.insert(schema.appUsers).values({
+      slackUserId: input.slackUserId,
+      email: input.email,
+      displayName: input.displayName,
+      avatarUrl: input.avatarUrl,
+      role,
+      lastLoginAt: dsql`now()`,
     });
-  if (!existing && (await countAdmins()) === 0) {
-    await db.update(schema.appUsers).set({ role: "admin" }).where(eq(schema.appUsers.slackUserId, input.slackUserId));
-  }
+  });
   return (await getAppUser(input.slackUserId))!;
 }
 

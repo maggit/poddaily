@@ -72,4 +72,20 @@ describe("app_users data access", () => {
     const ids = (await listAppUsers()).map((u) => u.slackUserId);
     expect(ids).toContain(U1);
   });
+
+  it("reconciles by email when the Slack id changes, healing duplicate rows", async () => {
+    // An old row under a stale id, promoted to admin.
+    await provisionUserOnLogin({ slackUserId: U2, displayName: "Old", email: "merge@x.io" });
+    await changeUserRole(U2, "admin");
+    // A fresh login arrives with the correct Slack id but the same email.
+    await provisionUserOnLogin({ slackUserId: U1, displayName: "New", email: "merge@x.io" });
+    // Stale row is gone; the role carried over to the new id.
+    expect(await getAppUser(U2)).toBeUndefined();
+    const u = await getAppUser(U1);
+    expect(u?.role).toBe("admin");
+    expect(u?.email).toBe("merge@x.io");
+    expect(u?.displayName).toBe("New");
+    // Exactly one row for that email.
+    expect((await listAppUsers()).filter((r) => r.email === "merge@x.io")).toHaveLength(1);
+  });
 });
