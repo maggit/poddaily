@@ -219,6 +219,21 @@ so no install can become locked out of its own admin UI.
 See the [RBAC ADR](ContextDB/03_decisions/2026-06-26-rbac-role-tiers.md) and the
 [role-tier spec](ContextDB/01_specs/phase-2-d-rbac-spec.md) for the full design.
 
+### Admin UI & theming
+
+The admin web app uses a "Crisp Product" design system — cool-white canvas, true-black ink, a
+distinctive grotesk pairing (Geist body + Schibsted Grotesk display, both via `next/font` — no
+install step), a single cobalt accent, layered elevation, and subtle load-reveal motion.
+
+It's built to **reskin from one file.** All design tokens live in
+[`apps/web/app/globals.css`](apps/web/app/globals.css) (`:root` = the light product theme;
+`.dark` = the `/login` theme), and components only use semantic classes. Change `--accent` once
+and every active nav item, link, focus ring, and accent button updates app-wide; swap the whole
+palette by editing `:root`; adjust corner roundness via `--radius`. Reusable building blocks live
+in `apps/web/components/ui/` (`form`, `button`, `data-table`, `status-pill`, `empty-state`,
+`avatar`) and the app shell (`components/app-shell/`). Full spec + what's still pending:
+[design-direction.md](ContextDB/04_knowledge/design-direction.md#polish-pass--2026-06-27-crisp-product).
+
 ## Configuration
 
 All configuration is via environment variables; copy `.env.example` to `.env.local`. Each

@@ -13,9 +13,11 @@ export function ReportCard({ card }: { card: ReportCardData }) {
   const s = STATUS[card.status];
   const muted = card.status !== "completed";
   return (
-    <div className={`rounded-xl border border-border bg-card p-5 ${muted ? "opacity-70" : ""}`}>
+    <div
+      className={`rounded-xl border border-border bg-card p-5 shadow-card transition-opacity ${muted ? "opacity-65" : ""}`}
+    >
       <div className="flex items-center gap-3">
-        <Avatar src={card.avatarUrl} name={card.displayName} />
+        <Avatar src={card.avatarUrl} name={card.displayName} size={38} />
         <div className="flex-1">
           <div className="font-medium text-foreground">{card.displayName}</div>
           {card.status === "completed" && card.reportedAt ? (
@@ -25,11 +27,11 @@ export function ReportCard({ card }: { card: ReportCardData }) {
         <StatusPill tone={s.tone}>{s.label}</StatusPill>
       </div>
       {card.answers.length > 0 ? (
-        <dl className="mt-4 space-y-3 border-t border-border pt-4">
+        <dl className="mt-4 space-y-3.5 border-t border-border pt-4">
           {card.answers.map((qa, i) => (
-            <div key={i}>
-              <dt className="text-[13px] font-medium text-foreground">{qa.question}</dt>
-              <dd className="mt-0.5 text-[13px] text-muted-foreground whitespace-pre-line">{qa.answer}</dd>
+            <div key={i} className="space-y-1">
+              <dt className="text-[11px] font-medium uppercase tracking-[0.06em] text-subtle-foreground">{qa.question}</dt>
+              <dd className="whitespace-pre-line text-[13.5px] leading-relaxed text-foreground">{qa.answer}</dd>
             </div>
           ))}
         </dl>

@@ -2,12 +2,23 @@ import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-8 text-center">
-        <h1 className="font-serif text-4xl leading-none text-foreground">poddaily</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Sign in to manage your team&apos;s standups.
-        </p>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden p-6">
+      {/* ambient backdrop */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/3 h-[480px] w-[480px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/20 blur-[120px]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.04] [background-image:radial-gradient(circle,white_1px,transparent_1px)] [background-size:22px_22px]"
+      />
+
+      <div className="reveal relative w-full max-w-sm rounded-2xl border border-border bg-card p-8 text-center shadow-lg">
+        <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-lg font-semibold text-accent-foreground shadow-sm">
+          p
+        </span>
+        <h1 className="mt-5 font-heading text-2xl font-semibold tracking-tight text-foreground">poddaily</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Sign in to manage your team&apos;s standups.</p>
         <form
           className="mt-7"
           action={async () => {
@@ -16,7 +27,7 @@ export default function LoginPage() {
             await signIn("slack", { redirectTo: "/dashboard" });
           }}
         >
-          <Button type="submit" variant="secondary" className="w-full gap-2">
+          <Button type="submit" size="lg" className="w-full">
             Sign in with Slack
           </Button>
         </form>
