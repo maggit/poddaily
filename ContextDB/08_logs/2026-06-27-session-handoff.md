@@ -77,14 +77,17 @@ opaque value that **rotates** between logins — not the Slack user id.
 - **Not done:** visual QA of authenticated screens (needs a live DB + Slack session — only `/login`
   was rendered headless).
 
+## Done & verified
+- ✅ **Slack member search / autocomplete — DONE 2026-06-29.** Built, deployed, and confirmed
+   working against the live 400+ member workspace: results return, the directory populated via the
+   worker sync. Cadence: every 6h + at worker boot + on-demand via Settings → Resync. Design +
+   file map: [Feature design: Slack member search](#feature-design-slack-member-search).
+
 ## Pending — continue tomorrow (priority order)
 1. **Visual QA pass (highest).** Bring the stack up, log in, and eyeball every page on desktop +
    mobile. Confirm: drawer behavior, table horizontal-scroll, form inline errors, loading
    skeletons, the new `/standups` + `/settings`. Screenshot before/after. This is the one thing not
    yet verified by eye.
-2. ✅ **Slack member search / autocomplete — BUILT 2026-06-28.** Implemented per the design below;
-   see [Feature design: Slack member search](#feature-design-slack-member-search) for the
-   "Implemented" notes. Remaining: visual QA of the combobox against a live workspace.
 3. **`UNIQUE(email)` DB constraint (hardening).** Can't be added until prod duplicates are gone
    (migration would fail today). Once logins have settled to one row per person, add a Drizzle
    migration + partial unique index `where email is not null`. Makes duplicate users structurally
@@ -104,7 +107,9 @@ See also the canonical pending list:
 
 ## Feature design: Slack member search
 
-> **Status: IMPLEMENTED 2026-06-28.** Built exactly to the architecture below (sync the directory,
+> **Status: DONE & VERIFIED 2026-06-29** (built 2026-06-28). Confirmed working against the live
+> workspace — search returns members, directory populated by the worker sync. Built exactly to the
+> architecture below (sync the directory,
 > search locally). Files:
 > - DB: `slack_directory_users` table + `pg_trgm` GIN search index — migration
 >   `packages/db/migrations/0006_easy_groot.sql`; data-access `packages/db/src/directory.ts`
