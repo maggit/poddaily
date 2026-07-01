@@ -48,7 +48,8 @@ export default async function IntegrationsPage() {
   const unmatchedCount = issueCount > 0 ? await countUnmatchedLinearAssignees(db) : 0;
   const disabled = Boolean(linear && linear.enabled === false);
   const hasSecret = Boolean(linear?.secretCiphertext);
-  const connected = !disabled && (issueCount > 0 || hasSecret);
+  const needsSecret = !disabled && !hasSecret; // required: events are rejected without it
+  const connected = !disabled && hasSecret;
 
   async function saveLinearSecretAction(fd: FormData) {
     "use server";
@@ -89,10 +90,10 @@ export default async function IntegrationsPage() {
               <h2 className="font-heading text-[16px] font-semibold tracking-tight text-foreground">Linear</h2>
               {disabled ? (
                 <StatusPill tone="danger">Disconnected</StatusPill>
-              ) : connected ? (
-                <StatusPill tone="success">Connected</StatusPill>
+              ) : needsSecret ? (
+                <StatusPill tone="warning">Action needed</StatusPill>
               ) : (
-                <StatusPill tone="neutral">Not set up</StatusPill>
+                <StatusPill tone="success">Connected</StatusPill>
               )}
             </div>
             <p className="mt-0.5 text-[13px] text-muted-foreground">
@@ -108,6 +109,16 @@ export default async function IntegrationsPage() {
             </p>
           </div>
         </div>
+
+        {needsSecret ? (
+          <div className="flex items-start gap-2 rounded-lg bg-warning-subtle p-3 text-warning-foreground">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <p className="text-[13px] leading-relaxed">
+              <span className="font-medium">Verification required.</span> Paste Linear&apos;s webhook
+              signing secret below — until then, all incoming events are rejected so only Linear can post here.
+            </p>
+          </div>
+        ) : null}
 
         <div className="space-y-2 border-t border-border pt-5">
           <p className="text-[13px] font-medium text-foreground">Payload URL</p>
@@ -128,6 +139,7 @@ export default async function IntegrationsPage() {
             <li>Under <span className="font-medium text-foreground">Data change events</span>, enable <span className="font-medium text-foreground">Issues</span>.</li>
             <li>Leave <span className="font-medium text-foreground">Teams</span> unrestricted (all teams) — poddaily matches activity to people by email, not by Linear team, so there&apos;s no need to pick specific teams.</li>
             <li>Select <span className="font-medium text-foreground">Create webhook</span>.</li>
+            <li>Copy the <span className="font-medium text-foreground">Signing secret</span> Linear shows and paste it into the field below — <span className="font-medium text-foreground">required</span>, or incoming events are rejected.</li>
           </ol>
           <p className="flex items-start gap-1.5 pt-1 text-[12.5px] text-subtle-foreground">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -137,19 +149,20 @@ export default async function IntegrationsPage() {
 
         <form action={saveLinearSecretAction} className="flex flex-wrap items-end gap-3 border-t border-border pt-5">
           <Field
-            label="Signing secret (optional)"
+            label="Signing secret (required)"
             className="min-w-64 flex-1"
+            required
             hint={
               disabled
-                ? "Linear is disconnected. Save (secret optional) to reconnect."
+                ? "Linear is disconnected. Paste the signing secret to reconnect."
                 : hasSecret
                   ? "A signing secret is saved. Enter a new one to replace it."
-                  : "Paste Linear's webhook signing secret to verify incoming events."
+                  : "Required — Linear events are verified against this and rejected without it."
             }
           >
             <Input type="password" name="secret" placeholder={hasSecret ? "••••••••••••" : "lin_wh_…"} autoComplete="off" />
           </Field>
-          <Button type="submit" variant="outline">
+          <Button type="submit" variant={needsSecret ? "accent" : "outline"}>
             {disabled ? "Reconnect" : hasSecret ? "Update secret" : "Save secret"}
           </Button>
         </form>

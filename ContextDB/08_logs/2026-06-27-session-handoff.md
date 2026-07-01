@@ -122,9 +122,15 @@ opaque value that **rotates** between logins — not the Slack user id.
    but still recorded as last event.
 - ✅ **Confirmed vs. real data 2026-07-01:** a real closed ticket matched — `assignee.email` IS in
    the payload and the email match works. So **no Linear API-key resolve is needed.**
-   **Still pending:** name-based fallback for people whose emails can't be aligned;
-   **public-endpoint security** (webhook is public; unsigned = anyone with the URL could inject —
-   next up); visual QA of the Integrations page.
+- ✅ **Public-endpoint security — DONE 2026-07-01.** Signature verification is now **mandatory**:
+   the webhook rejects any event with **no configured signing secret** or an **invalid
+   `Linear-Signature`** (401), plus a ~1 MB payload-size cap (413). The Integrations page makes the
+   secret **required** — "Action needed" pill + a warning banner when it's missing, and the setup
+   steps tell you to paste Linear's signing secret. Verified end-to-end: no-secret → 401,
+   wrong-sig → 401, valid-sig → stored. **⚠️ Deploy note:** because verification is now required, if
+   the saved secret doesn't exactly match Linear's webhook signing secret, events are rejected —
+   watch "Last event received" after deploy to confirm it keeps updating.
+   **Still pending:** name-based fallback for people whose emails can't be aligned; visual QA.
 
 ## Pending — continue tomorrow (priority order)
 1. **Visual QA pass (highest).** Bring the stack up, log in, and eyeball every page on desktop +
