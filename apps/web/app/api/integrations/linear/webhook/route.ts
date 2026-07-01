@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { decryptToken } from "@poddaily/shared";
-import { getIntegrationSetting, upsertLinearActivity } from "@poddaily/db";
+import { getIntegrationSetting, upsertLinearActivity, recordIntegrationEvent } from "@poddaily/db";
 import { db } from "@/lib/db";
 import { verifyLinearSignature, parseLinearIssueEvent } from "@/lib/linear";
 
@@ -16,11 +16,6 @@ export async function POST(req: NextRequest) {
   const raw = await req.text();
 
   const setting = await getIntegrationSetting(db, "linear");
-  // Disconnected: a config row exists and is explicitly disabled → accept but ignore.
-  // (No row = default-on, so a fresh "paste the URL" setup works before any config is saved.)
-  if (setting && setting.enabled === false) {
-    return NextResponse.json({ ok: true, stored: false, disabled: true });
-  }
   if (setting?.secretCiphertext) {
     let secret = "";
     try {
@@ -34,6 +29,16 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // A legit (signature-passing) event arrived — record it for the "events are arriving" indicator,
+  // even when the integration is disabled or the event is ultimately skipped.
+  await recordIntegrationEvent(db, "linear");
+
+  // Disconnected: a config row exists and is explicitly disabled → accept but ignore.
+  // (No row = default-on, so a fresh "paste the URL" setup works before any config is saved.)
+  if (setting && setting.enabled === false) {
+    return NextResponse.json({ ok: true, stored: false, disabled: true });
+  }
+
   let body: unknown;
   try {
     body = JSON.parse(raw);
@@ -41,15 +46,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
 
-  const activity = parseLinearIssueEvent(body as Parameters<typeof parseLinearIssueEvent>[0]);
-  if (activity) {
-    try {
-      await upsertLinearActivity(db, activity);
-    } catch (err) {
-      console.error("[linear-webhook] failed to store issue:", (err as Error).message);
-      return NextResponse.json({ error: "store failed" }, { status: 500 });
-    }
+  const result = parseLinearIssueEvent(body as Parameters<typeof parseLinearIssueEvent>[0]);
+  if (result.kind === "skip") {
+    console.log(`[linear-webhook] skipped — ${result.reason}`);
+    return NextResponse.json({ ok: true, stored: false, skipped: result.reason });
   }
-  // Always 200 for accepted (even ignored) events so Linear doesn't retry.
-  return NextResponse.json({ ok: true, stored: Boolean(activity) });
+
+  try {
+    await upsertLinearActivity(db, result.activity);
+  } catch (err) {
+    console.error("[linear-webhook] failed to store issue:", (err as Error).message);
+    return NextResponse.json({ error: "store failed" }, { status: 500 });
+  }
+  console.log(`[linear-webhook] stored ${result.activity.identifier ?? result.activity.linearIssueId} (${result.activity.stateType ?? "?"}) for ${result.activity.assigneeEmail}`);
+  return NextResponse.json({ ok: true, stored: true });
 }

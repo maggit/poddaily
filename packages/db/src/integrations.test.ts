@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { createDb } from "./client";
 import {
-  getIntegrationSetting, upsertIntegrationSetting,
+  getIntegrationSetting, upsertIntegrationSetting, recordIntegrationEvent,
   upsertLinearActivity, countLinearActivity, pruneLinearActivity, listCompletedLinearIssues,
   resolveMemberEmail, listMemberLinearClosed, listUnmatchedLinearAssignees, countUnmatchedLinearAssignees,
   type LinearActivityInput,
@@ -40,6 +40,21 @@ describe("integration settings + linear activity", () => {
     s = await getIntegrationSetting(db, "test-provider");
     expect(s?.enabled).toBe(true);
     expect(s?.secretCiphertext).toBe("enc-1");
+  });
+
+  it("recordIntegrationEvent creates a default-enabled row, then only bumps the timestamp", async () => {
+    // no row yet → creates enabled=true (so recording an event never disables a fresh setup)
+    await recordIntegrationEvent(db, "test-provider");
+    let s = await getIntegrationSetting(db, "test-provider");
+    expect(s?.enabled).toBe(true);
+    expect(s?.lastEventAt).toBeTruthy();
+    const first = s!.lastEventAt!;
+    // disable, then record again → enabled preserved, timestamp advances
+    await upsertIntegrationSetting(db, "test-provider", { enabled: false });
+    await recordIntegrationEvent(db, "test-provider");
+    s = await getIntegrationSetting(db, "test-provider");
+    expect(s?.enabled).toBe(false); // preserved
+    expect(new Date(s!.lastEventAt!).getTime()).toBeGreaterThanOrEqual(new Date(first).getTime());
   });
 
   it("upserts issue snapshots by id and lists completed issues in a window", async () => {

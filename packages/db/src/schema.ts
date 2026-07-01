@@ -124,6 +124,7 @@ export const integrationSettings = pgTable("integration_settings", {
   enabled: boolean("enabled").notNull().default(false),
   secretCiphertext: text("secret_ciphertext"),
   config: jsonb("config"),
+  lastEventAt: timestamp("last_event_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
