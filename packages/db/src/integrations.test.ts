@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { createDb } from "./client";
 import {
   getIntegrationSetting, upsertIntegrationSetting,
-  upsertLinearActivity, countLinearActivity, listCompletedLinearIssues,
+  upsertLinearActivity, countLinearActivity, pruneLinearActivity, listCompletedLinearIssues,
   resolveMemberEmail, listMemberLinearClosed, listUnmatchedLinearAssignees,
   type LinearActivityInput,
 } from "./integrations";
@@ -94,5 +94,15 @@ describe("integration settings + linear activity", () => {
     const row = unmatched.find((u) => u.email === UNMATCHED)!;
     expect(row.issueCount).toBe(2);
     expect(row.name).toBe("Nobody");
+  });
+
+  it("prunes activity older than the cutoff, keeping recent rows", async () => {
+    await sql`insert into linear_activity (linear_issue_id, assignee_email, state_type, received_at) values ('iss-old', ${EMAIL}, 'completed', '2020-01-01T00:00:00Z')`;
+    await upsertLinearActivity(db, issue("iss-new", { assigneeEmail: EMAIL }));
+
+    const removed = await pruneLinearActivity(db, new Date("2021-01-01T00:00:00Z"));
+    expect(removed).toBeGreaterThanOrEqual(1);
+    expect((await sql`select 1 from linear_activity where linear_issue_id = 'iss-old'`)[0]).toBeUndefined();
+    expect((await sql`select 1 from linear_activity where linear_issue_id = 'iss-new'`)[0]).toBeTruthy();
   });
 });

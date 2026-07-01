@@ -30,6 +30,12 @@ export const SYNC_DIRECTORY_JOB = "sync-directory";
 export const DIRECTORY_SYNC_SCHEDULER_ID = "directory-sync";
 export const DIRECTORY_SYNC_EVERY_MS = 6 * 60 * 60 * 1000; // every 6 hours
 
+/** Prune old Linear activity rows (we only surface recent completions). */
+export const PRUNE_LINEAR_JOB = "prune-linear-activity";
+export const PRUNE_LINEAR_SCHEDULER_ID = "prune-linear-activity";
+export const PRUNE_LINEAR_EVERY_MS = 24 * 60 * 60 * 1000; // daily
+export const LINEAR_ACTIVITY_RETENTION_DAYS = 45;
+
 /** Payload for a reminder job — nudge a member who hasn't finished today's run. */
 export interface ReminderJob {
   runId: string;

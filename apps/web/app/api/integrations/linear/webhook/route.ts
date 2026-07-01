@@ -16,6 +16,11 @@ export async function POST(req: NextRequest) {
   const raw = await req.text();
 
   const setting = await getIntegrationSetting(db, "linear");
+  // Disconnected: a config row exists and is explicitly disabled → accept but ignore.
+  // (No row = default-on, so a fresh "paste the URL" setup works before any config is saved.)
+  if (setting && setting.enabled === false) {
+    return NextResponse.json({ ok: true, stored: false, disabled: true });
+  }
   if (setting?.secretCiphertext) {
     let secret = "";
     try {
