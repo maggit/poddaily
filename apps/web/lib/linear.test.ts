@@ -34,8 +34,10 @@ describe("parseLinearIssueEvent", () => {
   };
 
   it("maps an assigned completed issue to an activity snapshot", () => {
-    const a = parseLinearIssueEvent(completedIssue)!;
-    expect(a).toMatchObject({
+    const r = parseLinearIssueEvent(completedIssue);
+    expect(r.kind).toBe("store");
+    if (r.kind !== "store") throw new Error("expected store");
+    expect(r.activity).toMatchObject({
       linearIssueId: "iss-uuid",
       identifier: "ENG-123",
       title: "Ship the thing",
@@ -43,13 +45,13 @@ describe("parseLinearIssueEvent", () => {
       assigneeEmail: "ada@x.io",
       assigneeName: "Ada Lovelace",
     });
-    expect(a.completedAt?.toISOString()).toBe("2026-06-29T18:00:00.000Z");
+    expect(r.activity.completedAt?.toISOString()).toBe("2026-06-29T18:00:00.000Z");
   });
 
-  it("ignores non-issue types, removes, and unassigned issues", () => {
-    expect(parseLinearIssueEvent({ type: "Comment", action: "create", data: { id: "c1" } })).toBeNull();
-    expect(parseLinearIssueEvent({ ...completedIssue, action: "remove" })).toBeNull();
-    expect(parseLinearIssueEvent({ type: "Issue", action: "update", data: { id: "x", assignee: null } })).toBeNull();
-    expect(parseLinearIssueEvent({ type: "Issue", action: "update", data: {} })).toBeNull();
+  it("skips non-issue types, removes, and unassigned issues — with a reason", () => {
+    expect(parseLinearIssueEvent({ type: "Comment", action: "create", data: { id: "c1" } })).toMatchObject({ kind: "skip", reason: expect.stringContaining("non-issue") });
+    expect(parseLinearIssueEvent({ ...completedIssue, action: "remove" })).toMatchObject({ kind: "skip", reason: "issue removed" });
+    expect(parseLinearIssueEvent({ type: "Issue", action: "update", data: { id: "x", assignee: null } })).toMatchObject({ kind: "skip", reason: expect.stringContaining("unassigned") });
+    expect(parseLinearIssueEvent({ type: "Issue", action: "update", data: {} })).toMatchObject({ kind: "skip", reason: expect.stringContaining("missing issue id") });
   });
 });

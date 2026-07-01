@@ -28,6 +28,16 @@ function Logo({ initial, color }: { initial: string; color: string }) {
   );
 }
 
+function timeAgo(date: Date): string {
+  const s = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+  if (s < 60) return "just now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
 export default async function IntegrationsPage() {
   await requireAdmin();
 
@@ -89,9 +99,14 @@ export default async function IntegrationsPage() {
               Surface the issues you closed yesterday in your standup&apos;s &ldquo;Previously&rdquo; section.
             </p>
           </div>
-          <span className="shrink-0 text-[12px] text-subtle-foreground tabular-nums">
-            {issueCount} {issueCount === 1 ? "issue" : "issues"} tracked
-          </span>
+          <div className="shrink-0 text-right">
+            <p className="text-[12px] tabular-nums text-subtle-foreground">
+              {issueCount} {issueCount === 1 ? "issue" : "issues"} tracked
+            </p>
+            <p className="text-[11px] text-subtle-foreground">
+              {linear?.lastEventAt ? `Last event ${timeAgo(linear.lastEventAt)}` : "No events received yet"}
+            </p>
+          </div>
         </div>
 
         <div className="space-y-2 border-t border-border pt-5">

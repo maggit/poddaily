@@ -29,28 +29,36 @@ interface LinearWebhookBody {
   };
 }
 
+/** Result of classifying a Linear webhook payload: store the snapshot, or skip with a reason. */
+export type LinearParseResult =
+  | { kind: "store"; activity: LinearActivityInput }
+  | { kind: "skip"; reason: string };
+
 /**
- * Map a Linear webhook payload to an issue snapshot to upsert, or null to ignore.
- * We only process **assigned Issue** create/update events (per the Linear integration spec);
- * non-Issue types, removes, and unassigned issues are ignored.
+ * Classify a Linear webhook payload. We only process **assigned Issue** create/update events
+ * (per the Linear integration spec); non-Issue types, removes, and unassigned issues are skipped
+ * with a human-readable reason (logged by the webhook for observability).
  */
-export function parseLinearIssueEvent(body: LinearWebhookBody): LinearActivityInput | null {
-  if (body.type !== "Issue") return null;
-  if (body.action === "remove") return null;
+export function parseLinearIssueEvent(body: LinearWebhookBody): LinearParseResult {
+  if (body.type !== "Issue") return { kind: "skip", reason: `non-issue event (type=${body.type ?? "?"})` };
+  if (body.action === "remove") return { kind: "skip", reason: "issue removed" };
   const d = body.data;
-  if (!d?.id) return null;
+  if (!d?.id) return { kind: "skip", reason: "missing issue id" };
   const email = d.assignee?.email?.trim().toLowerCase();
-  if (!email) return null; // only assigned issues
+  if (!email) return { kind: "skip", reason: `unassigned or no assignee email (${d.identifier ?? d.id})` };
 
   return {
-    linearIssueId: d.id,
-    identifier: d.identifier ?? null,
-    title: d.title ?? null,
-    url: d.url ?? null,
-    stateType: d.state?.type ?? null,
-    assigneeEmail: email, // normalized lowercase so it matches directory/app_users emails
-    assigneeName: d.assignee?.name ?? null,
-    completedAt: d.completedAt ? new Date(d.completedAt) : null,
-    issueUpdatedAt: d.updatedAt ? new Date(d.updatedAt) : null,
+    kind: "store",
+    activity: {
+      linearIssueId: d.id,
+      identifier: d.identifier ?? null,
+      title: d.title ?? null,
+      url: d.url ?? null,
+      stateType: d.state?.type ?? null,
+      assigneeEmail: email, // normalized lowercase so it matches directory/app_users emails
+      assigneeName: d.assignee?.name ?? null,
+      completedAt: d.completedAt ? new Date(d.completedAt) : null,
+      issueUpdatedAt: d.updatedAt ? new Date(d.updatedAt) : null,
+    },
   };
 }

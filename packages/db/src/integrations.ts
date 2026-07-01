@@ -36,6 +36,22 @@ export async function upsertIntegrationSetting(
     });
 }
 
+/**
+ * Record that a legit webhook event was received (bumps last_event_at) — for the "events are
+ * arriving" indicator. Creates the row with enabled=true if none exists, so recording an event
+ * never accidentally disables a fresh (default-on) integration; on an existing row it preserves
+ * enabled/secret and only updates the timestamp.
+ */
+export async function recordIntegrationEvent(db: Db, provider: string): Promise<void> {
+  await db
+    .insert(schema.integrationSettings)
+    .values({ provider, enabled: true, lastEventAt: new Date() })
+    .onConflictDoUpdate({
+      target: schema.integrationSettings.provider,
+      set: { lastEventAt: new Date() },
+    });
+}
+
 export interface LinearActivityInput {
   linearIssueId: string;
   identifier: string | null;

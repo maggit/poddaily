@@ -113,9 +113,18 @@ opaque value that **rotates** between logins — not the Slack user id.
    Connected/Disconnected/Not-set-up status; the webhook now **honors `enabled=false`** — a
    disconnected integration accepts but ignores events (no row = default-on so fresh setup still
    works). Verified: prune test + disabled-gate exercised end-to-end.
-   **Still pending / to tune vs. real data:** confirm `data.assignee.email` is present in real
-   payloads (else add a Linear API-key resolve); name-based fallback for people whose emails can't
-   be aligned; visual QA of the Integrations page.
+- ✅ **Observability — DONE 2026-07-01.** `integration_settings.last_event_at` (migration `0008`)
+   is bumped on **every** legitimate webhook hit via `recordIntegrationEvent` (creates the row
+   `enabled=true` so recording never disables a fresh setup) — even skipped/disabled events, so
+   "events are arriving" is visible. `parseLinearIssueEvent` now returns a store/skip result with a
+   **reason**; the webhook logs `[linear-webhook] skipped — …` / `stored …`. The Linear card shows
+   **"Last event received …"**. Confirmed end-to-end: an unassigned event is skipped-with-reason
+   but still recorded as last event.
+- ✅ **Confirmed vs. real data 2026-07-01:** a real closed ticket matched — `assignee.email` IS in
+   the payload and the email match works. So **no Linear API-key resolve is needed.**
+   **Still pending:** name-based fallback for people whose emails can't be aligned;
+   **public-endpoint security** (webhook is public; unsigned = anyone with the URL could inject —
+   next up); visual QA of the Integrations page.
 
 ## Pending — continue tomorrow (priority order)
 1. **Visual QA pass (highest).** Bring the stack up, log in, and eyeball every page on desktop +
