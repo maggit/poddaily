@@ -65,9 +65,19 @@ export function Select({ className, ...props }: React.ComponentProps<"select">) 
   return <select className={cn(fieldClass, "pr-8", className)} {...props} />;
 }
 
-export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
+export function Card({
+  className,
+  style,
+  children,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}) {
   return (
-    <div className={cn("rounded-xl border border-border bg-card p-6 shadow-card", className)}>{children}</div>
+    <div className={cn("rounded-xl border border-border bg-card p-6 shadow-card", className)} style={style}>
+      {children}
+    </div>
   );
 }
 

@@ -100,9 +100,15 @@ opaque value that **rotates** between logins — not the Slack user id.
    Not shown in the DM (per decision). Best-effort — empty if the member can't be matched by email.
    Verified: email-match, block rendering, and `getRunDetail` surfacing all covered by tests.
    Linear webhook **Teams** should be left unrestricted (matching is by person/email, not team).
+- ✅ **Unmatched-activity view + email normalization — DONE 2026-07-01.** Emails are normalized to
+   lowercase on store (`parseLinearIssueEvent`) and match (`resolveMemberEmail` /
+   `listCompletedLinearIssues`), fixing case-mismatch silent unmatches. The **Integrations** page
+   now shows an admin-only **"Unmatched Linear people"** section — distinct Linear assignee emails
+   with activity but no `slack_directory_users`/`app_users` match (case-insensitive), with issue
+   counts, so admins can spot/fix email mismatches. Data-access `listUnmatchedLinearAssignees`.
    **Still pending / to tune vs. real data:** confirm `data.assignee.email` is present in real
-   payloads (else add a Linear API-key resolve); name-based fallback + an unmatched-activity view;
-   `linear_activity` retention/prune; a "Disconnect / clear secret" control; visual QA.
+   payloads (else add a Linear API-key resolve); name-based fallback for people whose emails can't
+   be aligned; `linear_activity` retention/prune; a "Disconnect / clear secret" control; visual QA.
 
 ## Pending — continue tomorrow (priority order)
 1. **Visual QA pass (highest).** Bring the stack up, log in, and eyeball every page on desktop +
