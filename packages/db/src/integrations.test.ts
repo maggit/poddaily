@@ -3,13 +3,14 @@ import { createDb } from "./client";
 import {
   getIntegrationSetting, upsertIntegrationSetting,
   upsertLinearActivity, countLinearActivity, listCompletedLinearIssues,
-  resolveMemberEmail, listMemberLinearClosed,
+  resolveMemberEmail, listMemberLinearClosed, listUnmatchedLinearAssignees,
   type LinearActivityInput,
 } from "./integrations";
 
 const { db, sql } = createDb();
 const EMAIL = "ada+int@x.io";
 const MEMBER = "U_INT_MEMBER";
+const UNMATCHED = "nobody+int@x.io";
 
 function issue(id: string, over: Partial<LinearActivityInput> = {}): LinearActivityInput {
   return {
@@ -21,7 +22,7 @@ function issue(id: string, over: Partial<LinearActivityInput> = {}): LinearActiv
 }
 
 async function wipe() {
-  await sql`delete from linear_activity where assignee_email = ${EMAIL}`;
+  await sql`delete from linear_activity where assignee_email in (${EMAIL}, ${UNMATCHED})`;
   await sql`delete from integration_settings where provider = 'test-provider'`;
   await sql`delete from slack_directory_users where slack_user_id = ${MEMBER}`;
 }
@@ -76,5 +77,22 @@ describe("integration settings + linear activity", () => {
     // an unknown member resolves to no email → no activity
     expect(await resolveMemberEmail(db, "U_NOBODY_XYZ")).toBeNull();
     expect(await listMemberLinearClosed(db, "U_NOBODY_XYZ", from, to)).toHaveLength(0);
+  });
+
+  it("lists Linear assignees with no matching poddaily member (case-insensitive)", async () => {
+    // matched member (directory has the email in a DIFFERENT case → still matches)
+    await sql`insert into slack_directory_users (slack_user_id, display_name, email) values (${MEMBER}, 'Ada', ${"ADA+INT@X.IO"})`;
+    await upsertLinearActivity(db, issue("iss-match", { assigneeEmail: EMAIL, assigneeName: "Ada" }));
+    // unmatched assignee — no directory/app_users row for this email
+    await upsertLinearActivity(db, issue("iss-un1", { assigneeEmail: UNMATCHED, assigneeName: "Nobody" }));
+    await upsertLinearActivity(db, issue("iss-un2", { assigneeEmail: UNMATCHED, assigneeName: "Nobody" }));
+
+    const unmatched = await listUnmatchedLinearAssignees(db);
+    const emails = unmatched.map((u) => u.email);
+    expect(emails).toContain(UNMATCHED);
+    expect(emails).not.toContain(EMAIL); // matched via case-insensitive directory email
+    const row = unmatched.find((u) => u.email === UNMATCHED)!;
+    expect(row.issueCount).toBe(2);
+    expect(row.name).toBe("Nobody");
   });
 });

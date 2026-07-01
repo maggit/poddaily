@@ -85,13 +85,47 @@ export function listCompletedLinearIssues(db: Db, email: string, from: Date, to:
     .from(schema.linearActivity)
     .where(
       and(
-        eq(schema.linearActivity.assigneeEmail, email),
+        eq(schema.linearActivity.assigneeEmail, email.trim().toLowerCase()),
         eq(schema.linearActivity.stateType, "completed"),
         gte(schema.linearActivity.completedAt, from),
         lt(schema.linearActivity.completedAt, to),
       ),
     )
     .orderBy(desc(schema.linearActivity.completedAt));
+}
+
+export interface UnmatchedAssignee {
+  email: string;
+  name: string | null;
+  issueCount: number;
+  lastActivityAt: Date | null;
+}
+
+/**
+ * Distinct Linear assignee emails that have activity but match NO poddaily member
+ * (no `slack_directory_users` or `app_users` row with that email, case-insensitive).
+ * Their closed issues can't be surfaced — the admin fixes this by aligning emails.
+ */
+export async function listUnmatchedLinearAssignees(db: Db): Promise<UnmatchedAssignee[]> {
+  const rows = await db.execute(sql`
+    select la.assignee_email as email,
+           max(la.assignee_name) as name,
+           count(*)::int as issue_count,
+           max(coalesce(la.completed_at, la.received_at)) as last_activity
+    from linear_activity la
+    where la.assignee_email is not null
+      and not exists (select 1 from slack_directory_users d where lower(d.email) = lower(la.assignee_email))
+      and not exists (select 1 from app_users a where lower(a.email) = lower(la.assignee_email))
+    group by la.assignee_email
+    order by count(*) desc
+    limit 200
+  `);
+  return (rows as unknown as Array<{ email: string; name: string | null; issue_count: number; last_activity: string | null }>).map((r) => ({
+    email: r.email,
+    name: r.name,
+    issueCount: Number(r.issue_count),
+    lastActivityAt: r.last_activity ? new Date(r.last_activity) : null,
+  }));
 }
 
 /**
@@ -103,12 +137,12 @@ export async function resolveMemberEmail(db: Db, slackUserId: string): Promise<s
     .select({ email: schema.slackDirectoryUsers.email })
     .from(schema.slackDirectoryUsers)
     .where(eq(schema.slackDirectoryUsers.slackUserId, slackUserId));
-  if (dir?.email) return dir.email;
+  if (dir?.email) return dir.email.trim().toLowerCase();
   const [au] = await db
     .select({ email: schema.appUsers.email })
     .from(schema.appUsers)
     .where(eq(schema.appUsers.slackUserId, slackUserId));
-  return au?.email ?? null;
+  return au?.email ? au.email.trim().toLowerCase() : null;
 }
 
 /**

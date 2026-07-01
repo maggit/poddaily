@@ -39,7 +39,7 @@ export function parseLinearIssueEvent(body: LinearWebhookBody): LinearActivityIn
   if (body.action === "remove") return null;
   const d = body.data;
   if (!d?.id) return null;
-  const email = d.assignee?.email;
+  const email = d.assignee?.email?.trim().toLowerCase();
   if (!email) return null; // only assigned issues
 
   return {
@@ -48,7 +48,7 @@ export function parseLinearIssueEvent(body: LinearWebhookBody): LinearActivityIn
     title: d.title ?? null,
     url: d.url ?? null,
     stateType: d.state?.type ?? null,
-    assigneeEmail: email,
+    assigneeEmail: email, // normalized lowercase so it matches directory/app_users emails
     assigneeName: d.assignee?.name ?? null,
     completedAt: d.completedAt ? new Date(d.completedAt) : null,
     issueUpdatedAt: d.updatedAt ? new Date(d.updatedAt) : null,
