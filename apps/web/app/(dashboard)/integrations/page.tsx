@@ -72,9 +72,9 @@ export default async function IntegrationsPage() {
               Surface the issues you closed yesterday in your standup&apos;s &ldquo;Previously&rdquo; section.
             </p>
           </div>
-          {issueCount > 0 ? (
-            <span className="text-[12px] text-subtle-foreground tabular-nums">{issueCount} issues tracked</span>
-          ) : null}
+          <span className="shrink-0 text-[12px] text-subtle-foreground tabular-nums">
+            {issueCount} {issueCount === 1 ? "issue" : "issues"} tracked
+          </span>
         </div>
 
         <div className="space-y-2 border-t border-border pt-5">
