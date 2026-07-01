@@ -240,6 +240,12 @@ All configuration is via environment variables; copy `.env.example` to `.env.loc
 variable, where it comes from, and its local-vs-live value are documented in the
 [env var reference](ContextDB/00_index/getting-started.md#environment-variable-reference).
 
+> **`NEXTAUTH_URL` is needed on `web`, `api`, and `worker`.** Beyond auth, the `worker` uses it to
+> build the daily "Connect to post as yourself" nudge in the standup DM for members who haven't
+> connected, and the `api` uses it for the inline connect link on bot-posted reports. If it's unset
+> on those services the standup still runs and unconnected members' updates still post (as the bot,
+> with their name) — the connect prompts are just silently skipped.
+
 `STANDUP_TIMEOUT_MS` (default `14400000` = 4h) is the per-report **inactivity** timeout: the
 clock resets every time a member replies, so a report is only marked `timed_out` (and not
 broadcast) after this long with **no reply** — not a fixed deadline from when the DM was sent.
