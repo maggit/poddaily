@@ -6,7 +6,8 @@ export interface BuiltMessage {
   blocks: unknown[];
 }
 
-/** The opening thread message for a run, with the live "Reported: n out of total" counter. */
+/** The header message for a run, with the live "Reported: n out of total" counter. Individual
+ * reports post directly to the channel below it (not threaded), so it's a running header. */
 export function buildOpeningMessage(args: {
   standupName: string;
   date: string;
@@ -16,7 +17,6 @@ export function buildOpeningMessage(args: {
   const { standupName, date, reported, total } = args;
   const text =
     `📋 *${standupName} — ${date}*\n` +
-    `Find all reports for *${standupName}, ${date}* in this thread.\n` +
     `Reported: ${reported} out of ${total}`;
   return { text, blocks: [{ type: "section", text: { type: "mrkdwn", text } }] };
 }

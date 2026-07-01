@@ -122,10 +122,6 @@ async function broadcastReport(
   const { db, slack, secret, makeUserSlack } = deps;
   const { report, run, standup, answers } = ctx;
   try {
-    if (!run.channelOpeningTs) {
-      console.warn(`[broadcast] run ${run.id} has no opening ts; skipping report ${report.id}`);
-      return;
-    }
     if (!standup.teamId) return;
 
     const [team] = await db
@@ -150,10 +146,10 @@ async function broadcastReport(
     let postTs: string | null = null;
     if (token) {
       // Post AS THE USER — true authorship, no username/icon override. Slack counts it
-      // as the user's message (no "APP" badge).
+      // as the user's message (no "APP" badge). Posted to the channel (not threaded) so
+      // updates are visible in the main channel feed.
       try {
         postTs = await makeUserSlack(token).postMessage(team.channelId, built.text, {
-          threadTs: run.channelOpeningTs,
           blocks: built.blocks,
         });
       } catch (err) {
@@ -177,7 +173,6 @@ async function broadcastReport(
           }]
         : built.blocks;
       postTs = await slack.postMessage(team.channelId, built.text, {
-        threadTs: run.channelOpeningTs,
         username: report.slackDisplayName,
         iconUrl: member?.avatar ?? undefined,
         blocks,
@@ -188,19 +183,23 @@ async function broadcastReport(
       .set({ channelPostTs: postTs })
       .where(eq(schema.standupReports.id, report.id));
 
-    const all = await db
-      .select({ status: schema.standupReports.status })
-      .from(schema.standupReports)
-      .where(eq(schema.standupReports.runId, run.id));
-    const total = all.length;
-    const reported = all.filter((r) => r.status === "completed").length;
-    const opening = buildOpeningMessage({
-      standupName: standup.name,
-      date: run.scheduledDate,
-      reported,
-      total,
-    });
-    await slack.updateMessage(team.channelId, run.channelOpeningTs, { text: opening.text, blocks: opening.blocks });
+    // Best-effort live "Reported: n out of total" counter on the opening/header message,
+    // if one was posted. The report is already in the channel regardless.
+    if (run.channelOpeningTs) {
+      const all = await db
+        .select({ status: schema.standupReports.status })
+        .from(schema.standupReports)
+        .where(eq(schema.standupReports.runId, run.id));
+      const total = all.length;
+      const reported = all.filter((r) => r.status === "completed").length;
+      const opening = buildOpeningMessage({
+        standupName: standup.name,
+        date: run.scheduledDate,
+        reported,
+        total,
+      });
+      await slack.updateMessage(team.channelId, run.channelOpeningTs, { text: opening.text, blocks: opening.blocks });
+    }
   } catch (err) {
     console.warn(`[broadcast] degraded for report ${report.id}:`, (err as Error).message);
   }
