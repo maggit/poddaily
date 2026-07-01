@@ -91,9 +91,18 @@ opaque value that **rotates** between logins — not the Slack user id.
    Verified end-to-end locally (POST → row persisted). Files: `packages/db/src/integrations.ts`
    + migration `0007`; `apps/web/lib/linear.ts`; `app/api/integrations/linear/webhook/route.ts`;
    `app/(dashboard)/integrations/page.tsx` + `components/integrations/copy-field.tsx`.
-   **Phase 2 (next):** match `assignee_email` → member (via `app_users`/`slack_directory_users`
-   email) and inject "N tickets closed yesterday" into the standup DM/report "Previously" block —
-   data-access `listCompletedLinearIssues(db, email, from, to)` already exists for it.
+- ✅ **Linear check-ins (Phase 2) — DONE 2026-07-01.** Match a member to their Linear activity by
+   email (`resolveMemberEmail`: `slack_directory_users` → `app_users`) and surface issues they
+   completed since their last standup in two places: the **channel broadcast** (`buildReportBlocks`
+   gained an optional "Closed in Linear · N" section with linked issues; `handleMessage` fetches
+   the window `[last report .. now]` via `listMemberLinearClosed`) and the **report card**
+   (`lib/reports.ts` attaches `linearIssues`; `ReportCard` renders a "Closed in Linear" list).
+   Not shown in the DM (per decision). Best-effort — empty if the member can't be matched by email.
+   Verified: email-match, block rendering, and `getRunDetail` surfacing all covered by tests.
+   Linear webhook **Teams** should be left unrestricted (matching is by person/email, not team).
+   **Still pending / to tune vs. real data:** confirm `data.assignee.email` is present in real
+   payloads (else add a Linear API-key resolve); name-based fallback + an unmatched-activity view;
+   `linear_activity` retention/prune; a "Disconnect / clear secret" control; visual QA.
 
 ## Pending — continue tomorrow (priority order)
 1. **Visual QA pass (highest).** Bring the stack up, log in, and eyeball every page on desktop +

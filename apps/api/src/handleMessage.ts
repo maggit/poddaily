@@ -1,4 +1,4 @@
-import { schema, eq, and, desc, getUserToken, finalizeRunIfDone, lastReportDateBefore } from "@poddaily/db";
+import { schema, eq, and, desc, getUserToken, finalizeRunIfDone, lastReportDateBefore, listMemberLinearClosed } from "@poddaily/db";
 import { advanceReport, buildOpeningMessage, buildReportBlocks, interpolateLastReportDate } from "@poddaily/shared";
 import { getMemberDayState } from "./standupState";
 import type { ReportAnswer, RetriggerJob } from "@poddaily/shared";
@@ -131,10 +131,21 @@ async function broadcastReport(
     if (!team?.channelId) return;
 
     const lastDate = await lastReportDateBefore(db, report.slackUserId, report.createdAt ?? new Date());
+    // Linear issues the member completed since their last standup (best-effort; empty if unmatched).
+    const to = report.reportedAt ?? new Date();
+    const from = lastDate ?? new Date(to.getTime() - 24 * 60 * 60 * 1000);
+    let linearIssues: { identifier: string | null; title: string | null; url: string | null }[] = [];
+    try {
+      linearIssues = (await listMemberLinearClosed(db, report.slackUserId, from, to))
+        .map((i) => ({ identifier: i.identifier, title: i.title, url: i.url }));
+    } catch (err) {
+      console.warn(`[broadcast] linear lookup failed for ${report.slackUserId}:`, (err as Error).message);
+    }
     const built = buildReportBlocks({
       standupName: standup.name,
       displayName: report.slackDisplayName,
       answers: answers.map((a) => ({ ...a, questionText: interpolateLastReportDate(a.questionText, lastDate) })),
+      linearIssues,
     });
     let token: string | null = null;
     try {

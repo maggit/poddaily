@@ -13,6 +13,8 @@ async function cleanup() {
   await sql`delete from standups where team_id in (select id from teams where slack_channel_id = ${CHAN})`;
   await sql`delete from team_members where team_id in (select id from teams where slack_channel_id = ${CHAN})`;
   await sql`delete from teams where slack_channel_id = ${CHAN}`;
+  await sql`delete from linear_activity where assignee_email = 'u_a@reports.test'`;
+  await sql`delete from slack_directory_users where slack_user_id = 'U_A'`;
 }
 
 beforeAll(async () => {
@@ -35,6 +37,12 @@ beforeAll(async () => {
   await sql`insert into standup_reports (run_id, slack_user_id, slack_display_name, answers, status) values (${todayRunId}, 'U_A', 'Member U_A', ${JSON.stringify([{ questionId: "q1", questionText: "Since {last_report_date}?", answer: "shipped" }, { questionId: "q2", questionText: "Today?", answer: "more" }])}, 'completed')`;
   await sql`insert into standup_reports (run_id, slack_user_id, slack_display_name, answers, status) values (${todayRunId}, 'U_B', 'Member U_B', ${JSON.stringify([])}, 'timed_out')`;
   // U_C has no report row → absent
+
+  // U_A is matched to Linear activity by directory email; one issue completed inside the window
+  // [last report 2026-06-20 .. now]. U_B/U_C have no email → no activity.
+  await sql`insert into slack_directory_users (slack_user_id, display_name, email) values ('U_A', 'Member U_A', 'u_a@reports.test')`;
+  await sql`insert into linear_activity (linear_issue_id, identifier, title, url, state_type, assignee_email, completed_at)
+            values ('rep-iss-1', 'ENG-1', 'Did a thing', 'https://linear.app/x/ENG-1', 'completed', 'u_a@reports.test', '2026-06-25T10:00:00Z')`;
 });
 afterAll(async () => { await cleanup(); await sql.end(); });
 
@@ -63,6 +71,9 @@ describe("getRunDetail", () => {
     expect(a.answers[0].question).toContain("Jun 20");
     expect(cards.find((c) => c.slackUserId === "U_B")!.status).toBe("timed_out");
     expect(cards.find((c) => c.slackUserId === "U_C")!.status).toBe("absent");
+    // U_A's completed Linear issue surfaces on the card; unmatched members have none.
+    expect(a.linearIssues.map((i) => i.identifier)).toContain("ENG-1");
+    expect(cards.find((c) => c.slackUserId === "U_B")!.linearIssues).toHaveLength(0);
   });
   it("returns null for an unknown team", async () => {
     expect(await getRunDetail("00000000-0000-0000-0000-000000000000")).toBeNull();
