@@ -1,6 +1,12 @@
-import { eq, and, desc, lastReportDateBefore, schema } from "@poddaily/db";
+import { eq, and, desc, lastReportDateBefore, listMemberLinearClosed, schema } from "@poddaily/db";
 import { interpolateLastReportDate } from "@poddaily/shared";
 import { db, sql } from "./db";
+
+export interface LinearIssueRef {
+  identifier: string | null;
+  title: string | null;
+  url: string | null;
+}
 
 export interface OverviewRow {
   teamId: string; teamName: string; slackChannelName: string; standupName: string;
@@ -38,6 +44,7 @@ export interface ReportCard {
   status: "completed" | "in_progress" | "timed_out" | "absent";
   answers: { question: string; answer: string }[];
   reportedAt: Date | null;
+  linearIssues: LinearIssueRef[];
 }
 export interface RunDetail {
   team: { id: string; name: string; slackChannelName: string };
@@ -75,16 +82,22 @@ export async function getRunDetail(teamId: string, date?: string): Promise<RunDe
   const cards: ReportCard[] = await Promise.all(members.map(async (m) => {
     const rep = byUser.get(m.slackUserId);
     if (!rep) {
-      return { slackUserId: m.slackUserId, displayName: m.slackDisplayName, avatarUrl: m.slackAvatarUrl, status: "absent", answers: [], reportedAt: null };
+      return { slackUserId: m.slackUserId, displayName: m.slackDisplayName, avatarUrl: m.slackAvatarUrl, status: "absent", answers: [], reportedAt: null, linearIssues: [] };
     }
     let answers: { question: string; answer: string }[] = [];
+    let linearIssues: LinearIssueRef[] = [];
     if (rep.status === "completed") {
       const lastDate = await lastReportDateBefore(db, m.slackUserId, rep.createdAt ?? new Date());
       answers = rep.answers.map((a) => ({ question: interpolateLastReportDate(a.questionText, lastDate), answer: a.answer }));
+      // Linear issues completed since the member's last standup (best-effort; empty if unmatched).
+      const to = rep.reportedAt ?? new Date();
+      const from = lastDate ?? new Date(to.getTime() - 24 * 60 * 60 * 1000);
+      linearIssues = (await listMemberLinearClosed(db, m.slackUserId, from, to))
+        .map((i) => ({ identifier: i.identifier, title: i.title, url: i.url }));
     }
     return {
       slackUserId: m.slackUserId, displayName: m.slackDisplayName, avatarUrl: m.slackAvatarUrl,
-      status: (rep.status ?? "in_progress") as ReportCard["status"], answers, reportedAt: rep.reportedAt,
+      status: (rep.status ?? "in_progress") as ReportCard["status"], answers, reportedAt: rep.reportedAt, linearIssues,
     };
   }));
 

@@ -3,11 +3,13 @@ import { createDb } from "./client";
 import {
   getIntegrationSetting, upsertIntegrationSetting,
   upsertLinearActivity, countLinearActivity, listCompletedLinearIssues,
+  resolveMemberEmail, listMemberLinearClosed,
   type LinearActivityInput,
 } from "./integrations";
 
 const { db, sql } = createDb();
 const EMAIL = "ada+int@x.io";
+const MEMBER = "U_INT_MEMBER";
 
 function issue(id: string, over: Partial<LinearActivityInput> = {}): LinearActivityInput {
   return {
@@ -21,6 +23,7 @@ function issue(id: string, over: Partial<LinearActivityInput> = {}): LinearActiv
 async function wipe() {
   await sql`delete from linear_activity where assignee_email = ${EMAIL}`;
   await sql`delete from integration_settings where provider = 'test-provider'`;
+  await sql`delete from slack_directory_users where slack_user_id = ${MEMBER}`;
 }
 beforeEach(wipe);
 afterAll(async () => { await wipe(); await sql.end(); });
@@ -57,5 +60,21 @@ describe("integration settings + linear activity", () => {
     expect(ids).not.toContain("iss-3"); // not completed
     expect(ids).not.toContain("iss-4"); // completed before the window
     expect(done.find((d) => d.linearIssueId === "iss-1")?.title).toBe("renamed");
+  });
+
+  it("matches a member to their Linear activity by directory email", async () => {
+    // member's Slack directory row carries the email Linear assigns issues to
+    await sql`insert into slack_directory_users (slack_user_id, display_name, email) values (${MEMBER}, 'Ada', ${EMAIL})`;
+    await upsertLinearActivity(db, issue("iss-m1", { identifier: "ENG-9" }));
+
+    expect(await resolveMemberEmail(db, MEMBER)).toBe(EMAIL);
+    const from = new Date("2026-06-29T00:00:00Z");
+    const to = new Date("2026-06-30T00:00:00Z");
+    const closed = await listMemberLinearClosed(db, MEMBER, from, to);
+    expect(closed.map((c) => c.linearIssueId)).toContain("iss-m1");
+
+    // an unknown member resolves to no email → no activity
+    expect(await resolveMemberEmail(db, "U_NOBODY_XYZ")).toBeNull();
+    expect(await listMemberLinearClosed(db, "U_NOBODY_XYZ", from, to)).toHaveLength(0);
   });
 });

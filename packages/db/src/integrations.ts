@@ -93,3 +93,31 @@ export function listCompletedLinearIssues(db: Db, email: string, from: Date, to:
     )
     .orderBy(desc(schema.linearActivity.completedAt));
 }
+
+/**
+ * Resolve a Slack member's email. The synced workspace directory covers everyone, so try it
+ * first; fall back to app_users (people who've logged into the web app). Null if unknown.
+ */
+export async function resolveMemberEmail(db: Db, slackUserId: string): Promise<string | null> {
+  const [dir] = await db
+    .select({ email: schema.slackDirectoryUsers.email })
+    .from(schema.slackDirectoryUsers)
+    .where(eq(schema.slackDirectoryUsers.slackUserId, slackUserId));
+  if (dir?.email) return dir.email;
+  const [au] = await db
+    .select({ email: schema.appUsers.email })
+    .from(schema.appUsers)
+    .where(eq(schema.appUsers.slackUserId, slackUserId));
+  return au?.email ?? null;
+}
+
+/**
+ * A standup member's Linear issues completed in [from, to) — resolves their email, then queries.
+ * Empty if we can't match them to an email. This is the single entry point both the channel
+ * broadcast and the report card use.
+ */
+export async function listMemberLinearClosed(db: Db, slackUserId: string, from: Date, to: Date): Promise<LinearActivity[]> {
+  const email = await resolveMemberEmail(db, slackUserId);
+  if (!email) return [];
+  return listCompletedLinearIssues(db, email, from, to);
+}

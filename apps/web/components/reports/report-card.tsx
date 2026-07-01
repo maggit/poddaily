@@ -1,3 +1,4 @@
+import { CheckCircle2 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { StatusPill } from "@/components/ui/status-pill";
 import type { ReportCard as ReportCardData } from "@/lib/reports";
@@ -35,6 +36,30 @@ export function ReportCard({ card }: { card: ReportCardData }) {
             </div>
           ))}
         </dl>
+      ) : null}
+      {card.linearIssues.length > 0 ? (
+        <div className="mt-4 space-y-2 border-t border-border pt-4">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-subtle-foreground">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Closed in Linear · {card.linearIssues.length}
+          </p>
+          <ul className="space-y-1">
+            {card.linearIssues.map((i, k) => {
+              const label = [i.identifier, i.title].filter(Boolean).join(" ") || i.identifier || "Issue";
+              return (
+                <li key={k} className="text-[13px] leading-relaxed">
+                  {i.url ? (
+                    <a href={i.url} target="_blank" rel="noreferrer" className="text-accent transition-colors hover:text-accent-strong">
+                      {label}
+                    </a>
+                  ) : (
+                    <span className="text-foreground">{label}</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       ) : null}
     </div>
   );

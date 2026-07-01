@@ -41,4 +41,25 @@ describe("buildReportBlocks", () => {
     });
     expect(blocks).toHaveLength(3); // header + divider + 1
   });
+
+  it("appends a 'Closed in Linear' section with linked issues when provided", () => {
+    const { text, blocks } = buildReportBlocks({
+      standupName: "Daily Standup", displayName: "Raquel", answers,
+      linearIssues: [
+        { identifier: "ENG-777", title: "Ship member search", url: "https://linear.app/x/ENG-777" },
+        { identifier: "ENG-780", title: "Fix webhook auth", url: null },
+      ],
+    });
+    expect(blocks).toHaveLength(5); // header + divider + 2 Q&A + linear section
+    const linear = blocks[4] as { text: { text: string } };
+    expect(linear.text.text).toContain("*Closed in Linear* · 2");
+    expect(linear.text.text).toContain("<https://linear.app/x/ENG-777|ENG-777 Ship member search>");
+    expect(linear.text.text).toContain("• ENG-780 Fix webhook auth"); // no url → plain
+    expect(text).toContain("Closed in Linear (2):");
+  });
+
+  it("omits the Linear section when there are no issues", () => {
+    const { blocks } = buildReportBlocks({ standupName: "S", displayName: "X", answers, linearIssues: [] });
+    expect(blocks).toHaveLength(4); // header + divider + 2 Q&A, no linear section
+  });
 });

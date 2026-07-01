@@ -94,7 +94,7 @@ export default async function IntegrationsPage() {
             <li>Label it <span className="font-medium text-foreground">poddaily</span>.</li>
             <li>Paste the <span className="font-medium text-foreground">Payload URL</span> above into the <span className="font-medium text-foreground">URL</span> field.</li>
             <li>Under <span className="font-medium text-foreground">Data change events</span>, enable <span className="font-medium text-foreground">Issues</span>.</li>
-            <li>Optionally limit the <span className="font-medium text-foreground">Teams</span> poddaily receives events from.</li>
+            <li>Leave <span className="font-medium text-foreground">Teams</span> unrestricted (all teams) — poddaily matches activity to people by email, not by Linear team, so there&apos;s no need to pick specific teams.</li>
             <li>Select <span className="font-medium text-foreground">Create webhook</span>.</li>
           </ol>
           <p className="flex items-start gap-1.5 pt-1 text-[12.5px] text-subtle-foreground">
