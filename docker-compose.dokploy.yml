@@ -37,6 +37,9 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
+      # Base URL of the web app — used to build the "Connect to post as yourself" link
+      # on bot-posted reports (apps/api/src/handleMessage.ts). Omit it and the link is skipped.
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
       SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
       SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET}
       SLACK_CLIENT_ID: ${SLACK_CLIENT_ID}
@@ -53,6 +56,9 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
+      # Base URL of the web app — enables the daily "Connect to post as yourself" nudge in the
+      # standup DM for unconnected members (apps/worker/src/sendDm.ts). Omit it and the nudge is skipped.
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
       SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
     depends_on: [redis]
