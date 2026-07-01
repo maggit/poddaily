@@ -7,8 +7,9 @@ import { timeoutReport } from "./timeoutReport";
 import { retrigger } from "./retrigger";
 import { remindReport } from "./remindReport";
 import { syncDirectory } from "./syncDirectory";
+import { pruneLinear } from "./pruneLinear";
 import type { RetriggerJob, ReminderJob } from "@poddaily/shared";
-import { SEND_DM_JOB, REMINDER_JOB, SYNC_DIRECTORY_JOB } from "@poddaily/shared";
+import { SEND_DM_JOB, REMINDER_JOB, SYNC_DIRECTORY_JOB, PRUNE_LINEAR_JOB } from "@poddaily/shared";
 import type { Db, SendDmJob, TimeoutJob } from "./types";
 
 export interface ProcessorDeps {
@@ -41,6 +42,8 @@ export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<void
       await remindReport({ db, slack }, job.data as ReminderJob);
     } else if (job.name === SYNC_DIRECTORY_JOB) {
       await syncDirectory({ db, slack });
+    } else if (job.name === PRUNE_LINEAR_JOB) {
+      await pruneLinear({ db });
     } else {
       throw new Error(`[worker] unknown job name: ${job.name}`);
     }

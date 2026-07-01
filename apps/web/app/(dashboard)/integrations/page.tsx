@@ -35,18 +35,27 @@ export default async function IntegrationsPage() {
   const linear = await getIntegrationSetting(db, "linear");
   const issueCount = await countLinearActivity(db);
   const unmatched = issueCount > 0 ? await listUnmatchedLinearAssignees(db) : [];
+  const disabled = Boolean(linear && linear.enabled === false);
   const hasSecret = Boolean(linear?.secretCiphertext);
-  const connected = issueCount > 0 || hasSecret;
+  const connected = !disabled && (issueCount > 0 || hasSecret);
 
   async function saveLinearSecretAction(fd: FormData) {
     "use server";
     await requireAdmin();
     const secret = String(fd.get("secret") ?? "").trim();
-    // Only overwrite the stored secret when a new one is entered; always mark enabled.
+    // Only overwrite the stored secret when a new one is entered; saving always (re)enables.
     await upsertIntegrationSetting(db, "linear", {
       enabled: true,
       ...(secret ? { secretCiphertext: encryptToken(secret, process.env.INTERNAL_API_SECRET ?? "") } : {}),
     });
+    revalidatePath("/integrations");
+  }
+
+  async function disconnectLinearAction() {
+    "use server";
+    await requireAdmin();
+    // Stop processing events (webhook honors enabled=false) and clear the signing secret.
+    await upsertIntegrationSetting(db, "linear", { enabled: false, secretCiphertext: null });
     revalidatePath("/integrations");
   }
 
@@ -67,7 +76,13 @@ export default async function IntegrationsPage() {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h2 className="font-heading text-[16px] font-semibold tracking-tight text-foreground">Linear</h2>
-              {connected ? <StatusPill tone="success">Connected</StatusPill> : <StatusPill tone="neutral">Not set up</StatusPill>}
+              {disabled ? (
+                <StatusPill tone="danger">Disconnected</StatusPill>
+              ) : connected ? (
+                <StatusPill tone="success">Connected</StatusPill>
+              ) : (
+                <StatusPill tone="neutral">Not set up</StatusPill>
+              )}
             </div>
             <p className="mt-0.5 text-[13px] text-muted-foreground">
               Surface the issues you closed yesterday in your standup&apos;s &ldquo;Previously&rdquo; section.
@@ -108,14 +123,29 @@ export default async function IntegrationsPage() {
           <Field
             label="Signing secret (optional)"
             className="min-w-64 flex-1"
-            hint={hasSecret ? "A signing secret is saved. Enter a new one to replace it." : "Paste Linear's webhook signing secret to verify incoming events."}
+            hint={
+              disabled
+                ? "Linear is disconnected. Save (secret optional) to reconnect."
+                : hasSecret
+                  ? "A signing secret is saved. Enter a new one to replace it."
+                  : "Paste Linear's webhook signing secret to verify incoming events."
+            }
           >
             <Input type="password" name="secret" placeholder={hasSecret ? "••••••••••••" : "lin_wh_…"} autoComplete="off" />
           </Field>
           <Button type="submit" variant="outline">
-            {hasSecret ? "Update secret" : "Save secret"}
+            {disabled ? "Reconnect" : hasSecret ? "Update secret" : "Save secret"}
           </Button>
         </form>
+
+        {connected ? (
+          <form action={disconnectLinearAction} className="flex items-center justify-between gap-3 border-t border-border pt-4">
+            <p className="text-[12.5px] leading-relaxed text-subtle-foreground">
+              Stop processing Linear events and clear the signing secret. Also delete the webhook in Linear.
+            </p>
+            <Button type="submit" variant="destructive" className="shrink-0">Disconnect</Button>
+          </form>
+        ) : null}
       </Card>
 
       {/* Unmatched Linear activity */}

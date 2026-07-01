@@ -75,6 +75,15 @@ export async function countLinearActivity(db: Db): Promise<number> {
   return row?.n ?? 0;
 }
 
+/** Delete Linear activity received before `olderThan` (retention). Returns rows removed. */
+export async function pruneLinearActivity(db: Db, olderThan: Date): Promise<number> {
+  const removed = await db
+    .delete(schema.linearActivity)
+    .where(lt(schema.linearActivity.receivedAt, olderThan))
+    .returning({ id: schema.linearActivity.linearIssueId });
+  return removed.length;
+}
+
 /**
  * Issues assigned to `email` that Linear marked completed within [from, to). Phase 2 uses this
  * to build the "N tickets closed" line in a member's check-in.

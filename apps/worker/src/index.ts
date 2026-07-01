@@ -1,7 +1,7 @@
 import { Worker } from "bullmq";
 import { createDb } from "@poddaily/db";
 import { createSlackClient } from "@poddaily/slack-client";
-import { SYNC_DIRECTORY_JOB, DIRECTORY_SYNC_SCHEDULER_ID, DIRECTORY_SYNC_EVERY_MS } from "@poddaily/shared";
+import { SYNC_DIRECTORY_JOB, DIRECTORY_SYNC_SCHEDULER_ID, DIRECTORY_SYNC_EVERY_MS, PRUNE_LINEAR_JOB, PRUNE_LINEAR_SCHEDULER_ID, PRUNE_LINEAR_EVERY_MS } from "@poddaily/shared";
 import { QUEUE_NAME, createQueue, redisConnection } from "./queue";
 import { reconcileSchedules } from "./reconcileSchedules";
 import { createProcessor } from "./processor";
@@ -21,6 +21,13 @@ async function main() {
     { name: SYNC_DIRECTORY_JOB, data: {} },
   );
   await queue.add(SYNC_DIRECTORY_JOB, {}, { removeOnComplete: true, removeOnFail: false });
+
+  // Daily retention prune of stored Linear activity.
+  await queue.upsertJobScheduler(
+    PRUNE_LINEAR_SCHEDULER_ID,
+    { every: PRUNE_LINEAR_EVERY_MS },
+    { name: PRUNE_LINEAR_JOB, data: {} },
+  );
 
   const worker = new Worker(
     QUEUE_NAME,

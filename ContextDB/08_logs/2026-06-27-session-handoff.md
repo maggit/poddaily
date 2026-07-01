@@ -106,9 +106,15 @@ opaque value that **rotates** between logins — not the Slack user id.
    now shows an admin-only **"Unmatched Linear people"** section — distinct Linear assignee emails
    with activity but no `slack_directory_users`/`app_users` match (case-insensitive), with issue
    counts, so admins can spot/fix email mismatches. Data-access `listUnmatchedLinearAssignees`.
+- ✅ **Retention + disconnect control — DONE 2026-07-01.** Worker prunes `linear_activity` older
+   than 45 days (`pruneLinearActivity`, `PRUNE_LINEAR_JOB`, daily scheduler). The Integrations page
+   gained a **Disconnect** control (clears the signing secret + sets `enabled=false`) and a
+   Connected/Disconnected/Not-set-up status; the webhook now **honors `enabled=false`** — a
+   disconnected integration accepts but ignores events (no row = default-on so fresh setup still
+   works). Verified: prune test + disabled-gate exercised end-to-end.
    **Still pending / to tune vs. real data:** confirm `data.assignee.email` is present in real
    payloads (else add a Linear API-key resolve); name-based fallback for people whose emails can't
-   be aligned; `linear_activity` retention/prune; a "Disconnect / clear secret" control; visual QA.
+   be aligned; visual QA of the Integrations page.
 
 ## Pending — continue tomorrow (priority order)
 1. **Visual QA pass (highest).** Bring the stack up, log in, and eyeball every page on desktop +
