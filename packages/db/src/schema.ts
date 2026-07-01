@@ -117,6 +117,32 @@ export const slackDirectoryUsers = pgTable("slack_directory_users", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
+// Per-provider integration config (one row per provider: "linear", "github", …). Holds the
+// (optionally set) webhook signing secret, encrypted with INTERNAL_API_SECRET like user tokens.
+export const integrationSettings = pgTable("integration_settings", {
+  provider: text("provider").primaryKey(),
+  enabled: boolean("enabled").notNull().default(false),
+  secretCiphertext: text("secret_ciphertext"),
+  config: jsonb("config"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+// Latest-known snapshot of each Linear issue we've received via webhook (upserted by issue id).
+// Only assigned issues are stored. Phase 2 matches assignee_email → app_users/directory email
+// and surfaces recently-completed issues in a member's "Previously" check-in block.
+export const linearActivity = pgTable("linear_activity", {
+  linearIssueId: text("linear_issue_id").primaryKey(),
+  identifier: text("identifier"),
+  title: text("title"),
+  url: text("url"),
+  stateType: text("state_type"),
+  assigneeEmail: text("assignee_email"),
+  assigneeName: text("assignee_name"),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  issueUpdatedAt: timestamp("issue_updated_at", { withTimezone: true }),
+  receivedAt: timestamp("received_at", { withTimezone: true }).defaultNow(),
+});
+
 export type Team = typeof teams.$inferSelect;
 export type NewTeam = typeof teams.$inferInsert;
 export type TeamMember = typeof teamMembers.$inferSelect;
@@ -138,3 +164,7 @@ export type TeamManager = typeof teamManagers.$inferSelect;
 export type NewTeamManager = typeof teamManagers.$inferInsert;
 export type SlackDirectoryUser = typeof slackDirectoryUsers.$inferSelect;
 export type NewSlackDirectoryUser = typeof slackDirectoryUsers.$inferInsert;
+export type IntegrationSetting = typeof integrationSettings.$inferSelect;
+export type NewIntegrationSetting = typeof integrationSettings.$inferInsert;
+export type LinearActivity = typeof linearActivity.$inferSelect;
+export type NewLinearActivity = typeof linearActivity.$inferInsert;

@@ -9,6 +9,7 @@ const SECTION_LABELS: Record<string, string> = {
   standups: "Standups",
   settings: "Settings",
   people: "People",
+  integrations: "Integrations",
 };
 
 function sectionFromPath(pathname: string): string {
