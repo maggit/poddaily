@@ -103,9 +103,10 @@ opaque value that **rotates** between logins — not the Slack user id.
 - ✅ **Unmatched-activity view + email normalization — DONE 2026-07-01.** Emails are normalized to
    lowercase on store (`parseLinearIssueEvent`) and match (`resolveMemberEmail` /
    `listCompletedLinearIssues`), fixing case-mismatch silent unmatches. The **Integrations** page
-   now shows an admin-only **"Unmatched Linear people"** section — distinct Linear assignee emails
-   with activity but no `slack_directory_users`/`app_users` match (case-insensitive), with issue
-   counts, so admins can spot/fix email mismatches. Data-access `listUnmatchedLinearAssignees`.
+   shows a compact summary ("N Linear people unmatched — Review →") linking to a dedicated
+   **paginated** sub-page `/integrations/linear/unmatched` (admin) that lists the unmatched
+   assignees so the page stays small as more integrations are added. Data-access
+   `listUnmatchedLinearAssignees(db, {limit, offset})` + `countUnmatchedLinearAssignees`.
 - ✅ **Retention + disconnect control — DONE 2026-07-01.** Worker prunes `linear_activity` older
    than 45 days (`pruneLinearActivity`, `PRUNE_LINEAR_JOB`, daily scheduler). The Integrations page
    gained a **Disconnect** control (clears the signing secret + sets `enabled=false`) and a

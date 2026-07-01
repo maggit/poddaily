@@ -110,24 +110,34 @@ export interface UnmatchedAssignee {
   lastActivityAt: Date | null;
 }
 
+// The NOT-EXISTS predicate shared by the list + count queries.
+const UNMATCHED_WHERE = sql`
+  la.assignee_email is not null
+  and not exists (select 1 from slack_directory_users d where lower(d.email) = lower(la.assignee_email))
+  and not exists (select 1 from app_users a where lower(a.email) = lower(la.assignee_email))
+`;
+
 /**
  * Distinct Linear assignee emails that have activity but match NO poddaily member
  * (no `slack_directory_users` or `app_users` row with that email, case-insensitive).
- * Their closed issues can't be surfaced — the admin fixes this by aligning emails.
+ * Their closed issues can't be surfaced — the admin fixes this by aligning emails. Paginated.
  */
-export async function listUnmatchedLinearAssignees(db: Db): Promise<UnmatchedAssignee[]> {
+export async function listUnmatchedLinearAssignees(
+  db: Db,
+  opts: { limit?: number; offset?: number } = {},
+): Promise<UnmatchedAssignee[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 200, 1), 500);
+  const offset = Math.max(opts.offset ?? 0, 0);
   const rows = await db.execute(sql`
     select la.assignee_email as email,
            max(la.assignee_name) as name,
            count(*)::int as issue_count,
            max(coalesce(la.completed_at, la.received_at)) as last_activity
     from linear_activity la
-    where la.assignee_email is not null
-      and not exists (select 1 from slack_directory_users d where lower(d.email) = lower(la.assignee_email))
-      and not exists (select 1 from app_users a where lower(a.email) = lower(la.assignee_email))
+    where ${UNMATCHED_WHERE}
     group by la.assignee_email
     order by count(*) desc
-    limit 200
+    limit ${limit} offset ${offset}
   `);
   return (rows as unknown as Array<{ email: string; name: string | null; issue_count: number; last_activity: string | null }>).map((r) => ({
     email: r.email,
@@ -135,6 +145,16 @@ export async function listUnmatchedLinearAssignees(db: Db): Promise<UnmatchedAss
     issueCount: Number(r.issue_count),
     lastActivityAt: r.last_activity ? new Date(r.last_activity) : null,
   }));
+}
+
+/** Count of distinct unmatched Linear assignee emails (for the summary badge). */
+export async function countUnmatchedLinearAssignees(db: Db): Promise<number> {
+  const rows = await db.execute(sql`
+    select count(distinct la.assignee_email)::int as n
+    from linear_activity la
+    where ${UNMATCHED_WHERE}
+  `);
+  return Number((rows as unknown as Array<{ n: number }>)[0]?.n ?? 0);
 }
 
 /**

@@ -3,7 +3,7 @@ import { createDb } from "./client";
 import {
   getIntegrationSetting, upsertIntegrationSetting,
   upsertLinearActivity, countLinearActivity, pruneLinearActivity, listCompletedLinearIssues,
-  resolveMemberEmail, listMemberLinearClosed, listUnmatchedLinearAssignees,
+  resolveMemberEmail, listMemberLinearClosed, listUnmatchedLinearAssignees, countUnmatchedLinearAssignees,
   type LinearActivityInput,
 } from "./integrations";
 
@@ -94,6 +94,10 @@ describe("integration settings + linear activity", () => {
     const row = unmatched.find((u) => u.email === UNMATCHED)!;
     expect(row.issueCount).toBe(2);
     expect(row.name).toBe("Nobody");
+
+    // count + pagination
+    expect(await countUnmatchedLinearAssignees(db)).toBeGreaterThanOrEqual(1);
+    expect(await listUnmatchedLinearAssignees(db, { limit: 1, offset: 0 })).toHaveLength(1);
   });
 
   it("prunes activity older than the cutoff, keeping recent rows", async () => {
