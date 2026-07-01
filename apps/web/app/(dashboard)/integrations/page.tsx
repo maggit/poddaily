@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { CheckCircle2, Info, AlertTriangle } from "lucide-react";
+import { CheckCircle2, Info, AlertTriangle, ArrowRight } from "lucide-react";
 import { encryptToken } from "@poddaily/shared";
-import { getIntegrationSetting, countLinearActivity, upsertIntegrationSetting, listUnmatchedLinearAssignees } from "@poddaily/db";
+import { getIntegrationSetting, countLinearActivity, upsertIntegrationSetting, countUnmatchedLinearAssignees } from "@poddaily/db";
 import { requireAdmin } from "@/lib/authz";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
@@ -34,7 +35,7 @@ export default async function IntegrationsPage() {
   const payloadUrl = `${webUrl}/api/integrations/linear/webhook`;
   const linear = await getIntegrationSetting(db, "linear");
   const issueCount = await countLinearActivity(db);
-  const unmatched = issueCount > 0 ? await listUnmatchedLinearAssignees(db) : [];
+  const unmatchedCount = issueCount > 0 ? await countUnmatchedLinearAssignees(db) : 0;
   const disabled = Boolean(linear && linear.enabled === false);
   const hasSecret = Boolean(linear?.secretCiphertext);
   const connected = !disabled && (issueCount > 0 || hasSecret);
@@ -146,40 +147,31 @@ export default async function IntegrationsPage() {
             <Button type="submit" variant="destructive" className="shrink-0">Disconnect</Button>
           </form>
         ) : null}
-      </Card>
 
-      {/* Unmatched Linear activity */}
-      {issueCount > 0 ? (
-        <Card className="reveal space-y-3" style={{ animationDelay: "60ms" }}>
-          <div className="flex items-center justify-between gap-2">
-            <SectionTitle description="Linear activity is attributed to a member by email. Anyone here has activity we couldn't match — align their Linear email with their Slack/poddaily email so their closed issues show up.">
-              Unmatched Linear people
-            </SectionTitle>
-            {unmatched.length > 0 ? <StatusPill tone="warning">{unmatched.length}</StatusPill> : null}
-          </div>
-          {unmatched.length === 0 ? (
-            <p className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+        {/* Compact unmatched summary → dedicated paginated page */}
+        {issueCount > 0 ? (
+          unmatchedCount > 0 ? (
+            <Link
+              href="/integrations/linear/unmatched"
+              className="flex items-center gap-2.5 border-t border-border pt-4 text-[13px] transition-colors hover:text-foreground"
+            >
+              <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
+              <span className="flex-1 text-muted-foreground">
+                <span className="font-medium text-foreground">{unmatchedCount}</span> Linear{" "}
+                {unmatchedCount === 1 ? "person has" : "people have"} activity we couldn&apos;t match to a member
+              </span>
+              <span className="inline-flex items-center gap-1 font-medium text-accent">
+                Review <ArrowRight className="h-3.5 w-3.5" />
+              </span>
+            </Link>
+          ) : (
+            <p className="flex items-center gap-1.5 border-t border-border pt-4 text-[13px] text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 text-success" />
               All received Linear activity is matched to a poddaily member.
             </p>
-          ) : (
-            <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-              {unmatched.map((u) => (
-                <li key={u.email} className="flex items-center gap-3 bg-card px-3.5 py-2.5">
-                  <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium text-foreground">{u.name ?? u.email}</p>
-                    <p className="truncate font-mono text-[11.5px] text-subtle-foreground">{u.email}</p>
-                  </div>
-                  <span className="shrink-0 text-[12px] tabular-nums text-muted-foreground">
-                    {u.issueCount} {u.issueCount === 1 ? "issue" : "issues"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      ) : null}
+          )
+        ) : null}
+      </Card>
 
       {/* Coming soon */}
       <div className="reveal space-y-3" style={{ animationDelay: "80ms" }}>
