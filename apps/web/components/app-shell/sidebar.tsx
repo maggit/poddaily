@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, ListChecks, MessageSquare, Settings, Shield, LogOut, type LucideIcon } from "lucide-react";
+import { Users, ListChecks, MessageSquare, Settings, Shield, LogOut, Blocks, type LucideIcon } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
@@ -81,7 +81,10 @@ export function Sidebar({ userName, isAdmin, signOutAction, className, onNavigat
             <NavLink href="/people" icon={Shield} label="People" active={isActive(pathname, "/people")} onNavigate={onNavigate} />
           ) : null}
           {settings ? (
-            <NavLink href={settings.href} icon={ICONS[settings.icon]} label={settings.label} active={isActive(pathname, settings.href)} onNavigate={onNavigate} />
+            <NavLink href={settings.href} icon={ICONS[settings.icon]} label={settings.label} active={pathname === settings.href} onNavigate={onNavigate} />
+          ) : null}
+          {isAdmin ? (
+            <NavLink href="/integrations" icon={Blocks} label="Integrations" active={isActive(pathname, "/integrations")} onNavigate={onNavigate} />
           ) : null}
         </div>
       </nav>

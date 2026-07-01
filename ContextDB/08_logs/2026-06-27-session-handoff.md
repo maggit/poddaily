@@ -82,6 +82,18 @@ opaque value that **rotates** between logins — not the Slack user id.
    working against the live 400+ member workspace: results return, the directory populated via the
    worker sync. Cadence: every 6h + at worker boot + on-demand via Settings → Resync. Design +
    file map: [Feature design: Slack member search](#feature-design-slack-member-search).
+- ✅ **Integrations section + Linear webhook (Phase 1) — DONE 2026-06-30.** New **Integrations**
+   sidebar entry (under Settings, admin) at `/integrations`: Linear panel with the payload URL to
+   paste into Linear + setup steps + optional signing-secret; GitHub / Google Meet / Zoom shown as
+   "coming soon". Public webhook `POST /api/integrations/linear/webhook` (excluded from auth
+   middleware) verifies the `Linear-Signature` HMAC when a secret is configured, then upserts
+   **assigned Issue** snapshots into `linear_activity` (assignee email, state, completedAt).
+   Verified end-to-end locally (POST → row persisted). Files: `packages/db/src/integrations.ts`
+   + migration `0007`; `apps/web/lib/linear.ts`; `app/api/integrations/linear/webhook/route.ts`;
+   `app/(dashboard)/integrations/page.tsx` + `components/integrations/copy-field.tsx`.
+   **Phase 2 (next):** match `assignee_email` → member (via `app_users`/`slack_directory_users`
+   email) and inject "N tickets closed yesterday" into the standup DM/report "Previously" block —
+   data-access `listCompletedLinearIssues(db, email, from, to)` already exists for it.
 
 ## Pending — continue tomorrow (priority order)
 1. **Visual QA pass (highest).** Bring the stack up, log in, and eyeball every page on desktop +

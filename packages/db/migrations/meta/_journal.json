@@ -50,6 +50,13 @@
       "when": 1782664662727,
       "tag": "0006_easy_groot",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782875921088,
+      "tag": "0007_bent_gargoyle",
+      "breakpoints": true
     }
   ]
 }
