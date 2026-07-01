@@ -118,15 +118,12 @@ describe("smoke:standup", () => {
     // opening message posted to the team channel by the worker
     expect(channelMsgs.some((m) => m.text.includes("Reported: 0 out of 1"))).toBe(true);
 
-    // threaded report reply — 6b posts AS THE USER (xoxp-… token, no username override),
-    // so it's identified by thread_ts + the user Bearer token, not by a username.
-    const reply = channelMsgs.find((m) => m.thread_ts && m.token === "xoxp-stub-user");
+    // report posted to the channel (unthreaded) — 6b posts AS THE USER (xoxp-… token, no
+    // username override), so it's identified by the user Bearer token, not by a username.
+    const reply = channelMsgs.find((m) => m.token === "xoxp-stub-user");
     expect(reply).toBeTruthy();
+    expect(reply!.thread_ts).toBeUndefined(); // in the channel, not a thread reply
     expect(reply!.text).toContain("Build the inbound engine");
-
-    // 6b: the threaded report was posted with the connected member's USER token.
-    const channelReply = allMsgs.find((m) => m.channel === CHAN && (m as any).thread_ts);
-    expect((channelReply as any).token).toBe("xoxp-stub-user");
 
     // channel_post_ts persisted on the report
     const [reportRow] = await sql`select channel_post_ts from standup_reports where slack_user_id = ${USER}`;

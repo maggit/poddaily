@@ -91,29 +91,29 @@ Flow for one member:
 
 ## Channel broadcast
 
-> **Status — implemented in Step 6a.** The worker posts the opening message at run-open (with a
-> live `Reported: n out of total` counter, stored on `standup_runs.channel_opening_ts`); the api
-> posts each completed report as a threaded reply via `chat:write.customize` (bot posts with the
-> member's name/avatar) and updates the counter. True post-as-user (user-token) authorship is
-> pending **Step 6b** — 6a's name/avatar path is the permanent fallback. The bot must be a member
-> of the team channel or `chat.postMessage` returns `not_in_channel` (logged as `[broadcast]
-> degraded`); the broadcast is best-effort and never reverts the completed report.
+> **Status — implemented in Step 6a; un-threaded 2026-06-30.** The worker posts a header message
+> at run-open (with a live `Reported: n out of total` counter, stored on
+> `standup_runs.channel_opening_ts`); the api posts each completed report **directly to the
+> channel** (not as a thread reply — so updates are visible in the main channel feed) and updates
+> the header's counter. Reports post even if the header failed. Connected members post via their
+> own user token (true authorship); unconnected members fall back to `chat:write.customize` (bot
+> posts with the member's name/avatar). The bot must be a member of the team channel or
+> `chat.postMessage` returns `not_in_channel` (logged as `[broadcast] degraded`); the broadcast is
+> best-effort and never reverts the completed report.
 
 Per the [Slack message format](../01_specs/poddaily-prd.md#slack-message-format).
 
-1. **Opening thread message** — posted once per run to the team channel by the bot:
+1. **Header message** — posted once per run to the team channel by the bot:
    ```
    📋 *Daily Standup — {date}*
-   Find all reports for *Daily Standup, {date}* in this thread.
    Reported: {n} out of {total}
    ```
-   Its `ts` is stored on the run for threading.
-2. **Individual report** — a threaded reply (`thread_ts` = opening message ts) built with
-   Block Kit (header section + divider + one section per Q&A pair), posted with the
-   **user's token** so Slack attributes it to the user. The resulting `ts` is saved to
-   `standup_reports.channel_post_ts`.
+   Its `ts` is stored on the run (`channel_opening_ts`) so the counter can be updated in place.
+2. **Individual report** — posted **directly to the channel** (no `thread_ts`) with Block Kit
+   (header section + divider + one section per Q&A pair), using the **user's token** so Slack
+   attributes it to the user. The resulting `ts` is saved to `standup_reports.channel_post_ts`.
 3. If the user has no token → fallback to `chat:write.customize` (bot posts with the user's
-   `username`/`icon_url`), logged as degraded.
+   `username`/`icon_url` + a Connect nudge), logged as degraded.
 
 ## Failure & edge handling
 

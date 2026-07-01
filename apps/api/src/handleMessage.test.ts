@@ -17,6 +17,7 @@ function fakeSlack() {
     async postMessage(channel: string, text: string) { posts.push({ channel, text }); return "ts1"; },
     async updateMessage() {},
     async getUserProfile() { return { image: null, tz: null, realName: null }; },
+    async listAllUsers() { return []; },
   };
 }
 
@@ -74,7 +75,8 @@ describe("handleMessage", () => {
     const [r] = await sql`select * from standup_reports where slack_user_id = ${USER}`;
     expect(r.answers).toHaveLength(2);
     expect(r.status).toBe("completed");
-    expect(slack.posts.at(-1)?.text).toBe("Thanks!");
+    // outro ack is sent to the DM (the completed report is also broadcast to the channel).
+    expect(slack.posts.some((p) => p.text === "Thanks!")).toBe(true);
   });
 
   it("`skip all` aborts the report to timed_out", async () => {
@@ -86,7 +88,7 @@ describe("handleMessage", () => {
     expect(slack.posts.at(-1)?.text).toBe("No problem — skipping today's standup. 👋");
   });
 
-  it("broadcasts the completed report as a threaded reply and updates the counter", async () => {
+  it("broadcasts the completed report to the channel (unthreaded) and updates the counter", async () => {
     await sql`update standup_runs set channel_opening_ts = 'open_ts_1' where id = ${runId}`;
 
     const posts: Array<{ channel: string; text: string; opts: any }> = [];
@@ -95,34 +97,34 @@ describe("handleMessage", () => {
       openDm: async () => "D",
       postMessage: async (channel: string, text: string, opts: any = {}) => { posts.push({ channel, text, opts }); return "post_ts_1"; },
       updateMessage: async (channel: string, ts: string, o: any) => { updates.push({ channel, ts, text: o.text }); },
-      getUserProfile: async () => ({ image: null, tz: null, realName: null }),
+      getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [],
     };
 
     await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger: noEnq, makeUserSlack }, { slackUserId: USER, channel: DM, text: "answer 1" });
     await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger: noEnq, makeUserSlack }, { slackUserId: USER, channel: DM, text: "answer 2" });
 
-    const reply = posts.find((p) => p.opts?.threadTs === "open_ts_1");
+    const reply = posts.find((p) => p.channel === CHAN && p.opts?.username === "HM Tester");
     expect(reply).toBeTruthy();
-    expect(reply!.opts.username).toBe("HM Tester");
-    expect(reply!.channel).toBe(CHAN);
+    expect(reply!.opts.threadTs).toBeUndefined(); // posted to the channel, not in a thread
 
     const [r] = await sql`select channel_post_ts from standup_reports where slack_user_id = ${USER}`;
     expect(r.channel_post_ts).toBe("post_ts_1");
 
+    // the header/counter message is still updated in place
     const upd = updates.find((u) => u.ts === "open_ts_1");
     expect(upd?.text).toContain("Reported: 1 out of 1");
 
     await sql`update standup_runs set channel_opening_ts = null where id = ${runId}`;
   });
 
-  it("does not throw and leaves the report completed when broadcast has no opening ts", async () => {
+  it("still posts the report to the channel when there is no opening message", async () => {
     await sql`update standup_runs set channel_opening_ts = null where id = ${runId}`;
     const slack = fakeSlack();
     await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger: noEnq, makeUserSlack }, { slackUserId: USER, channel: DM, text: "a1" });
     await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger: noEnq, makeUserSlack }, { slackUserId: USER, channel: DM, text: "a2" });
     const [r] = await sql`select status, channel_post_ts from standup_reports where slack_user_id = ${USER}`;
     expect(r.status).toBe("completed");
-    expect(r.channel_post_ts).toBeNull();
+    expect(r.channel_post_ts).toBe("ts1"); // report reached the channel even without a header
   });
 
   it("finalizes the run when the last report completes", async () => {
@@ -156,13 +158,13 @@ describe("handleMessage", () => {
     await sql`insert into standup_reports (run_id, slack_user_id, slack_display_name, answers, status, reported_at, created_at) values ((select id from standup_runs where scheduled_date='2026-06-20' and standup_id=(select standup_id from standup_runs where id=${runId}) limit 1), ${USER}, 'HM Tester', ${JSON.stringify([])}, 'completed', '2026-06-20T10:00:00Z', '2026-06-20T10:00:00Z')`;
 
     const posts: Array<{ opts: any }> = [];
-    const slack = { openDm: async () => "D", postMessage: async (_c: string, _t: string, opts: any = {}) => { posts.push({ opts }); return "ts"; }, updateMessage: async () => {}, getUserProfile: async () => ({ image: null, tz: null, realName: null }) };
-    const makeUserSlackLocal = () => ({ openDm: async () => "D", postMessage: async () => "ts", updateMessage: async () => {}, getUserProfile: async () => ({ image: null, tz: null, realName: null }) });
+    const slack = { openDm: async () => "D", postMessage: async (_c: string, _t: string, opts: any = {}) => { posts.push({ opts }); return "ts"; }, updateMessage: async () => {}, getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [] };
+    const makeUserSlackLocal = () => ({ openDm: async () => "D", postMessage: async () => "ts", updateMessage: async () => {}, getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [] });
 
     await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger: noEnq, makeUserSlack: makeUserSlackLocal }, { slackUserId: USER, channel: DM, text: "a1" });
     await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger: noEnq, makeUserSlack: makeUserSlackLocal }, { slackUserId: USER, channel: DM, text: "a2" });
 
-    const reply = posts.find((p) => p.opts?.threadTs === "open_ts_lrd");
+    const reply = posts.find((p) => p.opts?.blocks);
     expect(reply).toBeTruthy();
     const blocksStr = JSON.stringify(reply!.opts.blocks);
     expect(blocksStr).not.toContain("{last_report_date}"); // interpolated, not raw
@@ -203,7 +205,9 @@ describe("handleMessage", () => {
 
     const [r] = await sql`select * from standup_reports where slack_user_id = ${USER2}`;
     expect(r.status).toBe("completed");
-    expect(slack.posts.at(-1)?.text).toBe("Thanks — your standup is in. ✅");
+    // default outro ack is sent to the DM (the report is also broadcast to the channel,
+    // so the ack is no longer necessarily the last post overall).
+    expect(slack.posts.some((p) => p.text === "Thanks — your standup is in. ✅")).toBe(true);
 
     // cleanup this test's isolated fixtures
     await sql`delete from standup_reports where slack_user_id = ${USER2}`;
@@ -222,13 +226,13 @@ describe("handleMessage", () => {
       openDm: async () => "D",
       postMessage: async (channel: string, _t: string, opts: any = {}) => { botPosts.push({ channel, opts }); return "bot_ts"; },
       updateMessage: async () => {},
-      getUserProfile: async () => ({ image: null, tz: null, realName: null }),
+      getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [],
     };
     const makeUserSlackConnected = (token: string) => ({
       openDm: async () => "D",
       postMessage: async (channel: string, _t: string, opts: any = {}) => { userPosts.push({ token, channel, opts }); return "user_ts"; },
       updateMessage: async () => {},
-      getUserProfile: async () => ({ image: null, tz: null, realName: null }),
+      getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [],
     });
 
     await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger: noEnq, makeUserSlack: makeUserSlackConnected }, { slackUserId: USER, channel: DM, text: "a1" });
@@ -236,7 +240,7 @@ describe("handleMessage", () => {
 
     expect(userPosts).toHaveLength(1);
     expect(userPosts[0].token).toBe("xoxp-user-1");
-    expect(userPosts[0].opts.threadTs).toBe("open_ts_b1");
+    expect(userPosts[0].opts.threadTs).toBeUndefined(); // posted to the channel, not threaded
     expect(userPosts[0].opts.username).toBeUndefined(); // true authorship — no override
     const [r] = await sql`select channel_post_ts from standup_reports where slack_user_id = ${USER}`;
     expect(r.channel_post_ts).toBe("user_ts");
@@ -256,15 +260,16 @@ describe("handleMessage", () => {
       openDm: async () => "D",
       postMessage: async (_c: string, _t: string, opts: any = {}) => { botPosts.push({ opts }); return "bot_ts"; },
       updateMessage: async () => {},
-      getUserProfile: async () => ({ image: null, tz: null, realName: null }),
+      getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [],
     };
     const makeUserSlackThrows = () => { throw new Error("should not be called when unconnected"); };
 
     await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger: noEnq, makeUserSlack: makeUserSlackThrows }, { slackUserId: USER, channel: DM, text: "a1" });
     await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger: noEnq, makeUserSlack: makeUserSlackThrows }, { slackUserId: USER, channel: DM, text: "a2" });
 
-    const reply = botPosts.find((p) => p.opts?.threadTs === "open_ts_b2");
+    const reply = botPosts.find((p) => p.opts?.username);
     expect(reply).toBeTruthy();
+    expect(reply!.opts.threadTs).toBeUndefined(); // posted to the channel, not threaded
     expect(reply!.opts.username).toBeTruthy(); // bot chat:write.customize attribution (the member name)
     expect(JSON.stringify(reply!.opts.blocks)).toContain("/api/slack/install"); // nudge present
 
@@ -284,22 +289,23 @@ describe("handleMessage", () => {
       openDm: async () => "D",
       postMessage: async (_c: string, _t: string, opts: any = {}) => { botPosts.push({ opts }); return "bot_ts"; },
       updateMessage: async () => {},
-      getUserProfile: async () => ({ image: null, tz: null, realName: null }),
+      getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [],
     };
     // user client throws (simulating invalid_auth/token_revoked)
     const makeUserSlackRevoked = () => ({
       openDm: async () => "D",
       postMessage: async () => { throw new Error("invalid_auth"); },
       updateMessage: async () => {},
-      getUserProfile: async () => ({ image: null, tz: null, realName: null }),
+      getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [],
     });
 
     await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger: noEnq, makeUserSlack: makeUserSlackRevoked }, { slackUserId: USER, channel: DM, text: "a1" });
     await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger: noEnq, makeUserSlack: makeUserSlackRevoked }, { slackUserId: USER, channel: DM, text: "a2" });
 
-    // degraded bot post happened (threaded, with the nudge), and channel_post_ts is the bot ts
-    const reply = botPosts.find((p) => p.opts?.threadTs === "open_ts_b3");
+    // degraded bot post happened (in-channel, with the nudge), and channel_post_ts is the bot ts
+    const reply = botPosts.find((p) => p.opts?.username);
     expect(reply).toBeTruthy();
+    expect(reply!.opts.threadTs).toBeUndefined(); // posted to the channel, not threaded
     expect(reply!.opts.username).toBeTruthy(); // chat:write.customize attribution
     expect(JSON.stringify(reply!.opts.blocks)).toContain("/api/slack/install"); // nudge present
     const [r] = await sql`select channel_post_ts from standup_reports where slack_user_id = ${USER}`;

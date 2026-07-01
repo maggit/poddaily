@@ -22,7 +22,7 @@ Checked items are implemented; unchecked are planned. Updated at the end of each
 - [x] Standup configuration (questions, schedule, intro/outro)
 - [x] Per-user-timezone scheduler (Step 5a — outbound DM only; Q&A engine in 5b)
 - [x] Conversational DM Q&A (one question at a time, skip / skip all, 4h timeout)
-- [x] Channel broadcast posted as the user, threaded under a daily opening message
+- [x] Channel broadcast posted as the user, directly in the channel (with a live "Reported n/total" header)
   - Connected members post via their own Slack user token (true authorship, no "APP" badge, counts as a user message in Slack analytics); unconnected members fall back to a bot post (`chat:write.customize`) with a "Connect" nudge — Step 6a delivered the broadcast/threading, Step 6b the post-as-user
 - [x] Reports dashboard (today + history, per-person check-in feed with Slack avatars) — admin-only
 - [x] Re-trigger a missed/timed-out standup via a DM keyword (`redo` / `restart` / `start` / `standup`)
@@ -91,13 +91,15 @@ aborts the report. On the last question the report is marked `completed` and the
 posted to the DM.
 
 **Channel broadcast (Step 6a).** On completion the report is also broadcast to the team's
-Slack channel: the worker posts a `📋 Daily Standup … Reported: n out of total` opening message
-once per run, and the api posts each completed report as a threaded Block Kit reply under it
-(attributed to the member via `chat:write.customize` — the bot posts with the member's
-name/avatar) and updates the counter. The broadcast is best-effort: a post failure is logged
-as `[broadcast] degraded` and swallowed, never reverting the completed report. **The bot must
-be invited to each team's Slack channel** (`/invite @poddaily`), otherwise `chat.postMessage`
-returns `not_in_channel` and the broadcast is logged as degraded.
+Slack channel: the worker posts a `📋 Daily Standup … Reported: n out of total` header message
+once per run, and the api posts each completed report **directly to the channel** (not in a
+thread — so updates are visible in the main channel feed) as a Block Kit message, then updates
+the header's live counter. Reports post even if the header failed to send. Each report is
+attributed to the member via `chat:write.customize` (the bot posts with the member's
+name/avatar). The broadcast is best-effort: a post failure is logged as `[broadcast] degraded`
+and swallowed, never reverting the completed report. **The bot must be invited to each team's
+Slack channel** (`/invite @poddaily`), otherwise `chat.postMessage` returns `not_in_channel`
+and the broadcast is logged as degraded.
 
 **Step 6b** makes connected members post **as themselves**. Each member completes a one-time
 reporter user-OAuth (`/api/slack/install` → `/api/slack/oauth/callback`) granting a `chat:write`
