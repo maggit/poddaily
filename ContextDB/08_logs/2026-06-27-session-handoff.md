@@ -130,6 +130,17 @@ opaque value that **rotates** between logins — not the Slack user id.
    wrong-sig → 401, valid-sig → stored. **⚠️ Deploy note:** because verification is now required, if
    the saved secret doesn't exactly match Linear's webhook signing secret, events are rejected —
    watch "Last event received" after deploy to confirm it keeps updating.
+- ✅ **Multi-secret support — DONE 2026-07-06.** New `integration_secrets` table (migration `0009`
+   copies the existing single secret in, so current webhooks keep verifying). Each Linear webhook
+   has its own signing secret; the webhook now verifies each event against **any** stored secret.
+   The Integrations page lists saved secrets (label + added-time, ciphertext never shown) with
+   add/remove, and disconnect clears all. This unblocks **private teams**: Linear's "All public
+   teams" webhook can't be edited to include private teams, so you create a **second webhook**
+   scoped to the private teams (you must be a member) pointed at the same payload URL, and add its
+   secret here. Data-access: `add/list/remove/countIntegrationSecrets` + `listIntegrationSecretCiphertexts`.
+   Verified e2e: event signed with the 2nd secret is accepted, wrong secret rejected.
+   **Root cause of "OFF team not syncing":** the prod webhook is scoped "All public teams" (immutable)
+   → the private `OFF` team is excluded. Fix = second webhook for private teams + its secret.
    **Still pending:** name-based fallback for people whose emails can't be aligned; visual QA.
 
 ## Pending — continue tomorrow (priority order)

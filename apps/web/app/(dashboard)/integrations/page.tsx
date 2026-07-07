@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { CheckCircle2, Info, AlertTriangle, ArrowRight } from "lucide-react";
+import { CheckCircle2, Info, AlertTriangle, ArrowRight, KeyRound, Trash2 } from "lucide-react";
 import { encryptToken } from "@poddaily/shared";
-import { getIntegrationSetting, countLinearActivity, upsertIntegrationSetting, countUnmatchedLinearAssignees } from "@poddaily/db";
+import {
+  getIntegrationSetting, countLinearActivity, upsertIntegrationSetting, countUnmatchedLinearAssignees,
+  listIntegrationSecretMeta, addIntegrationSecret, removeIntegrationSecret, removeAllIntegrationSecrets,
+} from "@poddaily/db";
 import { requireAdmin } from "@/lib/authz";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
@@ -46,28 +49,35 @@ export default async function IntegrationsPage() {
   const linear = await getIntegrationSetting(db, "linear");
   const issueCount = await countLinearActivity(db);
   const unmatchedCount = issueCount > 0 ? await countUnmatchedLinearAssignees(db) : 0;
+  const secrets = await listIntegrationSecretMeta(db, "linear");
   const disabled = Boolean(linear && linear.enabled === false);
-  const hasSecret = Boolean(linear?.secretCiphertext);
-  const needsSecret = !disabled && !hasSecret; // required: events are rejected without it
+  const hasSecret = secrets.length > 0;
+  const needsSecret = !disabled && !hasSecret; // required: events are rejected without a secret
   const connected = !disabled && hasSecret;
 
-  async function saveLinearSecretAction(fd: FormData) {
+  async function addLinearSecretAction(fd: FormData) {
     "use server";
     await requireAdmin();
     const secret = String(fd.get("secret") ?? "").trim();
-    // Only overwrite the stored secret when a new one is entered; saving always (re)enables.
-    await upsertIntegrationSetting(db, "linear", {
-      enabled: true,
-      ...(secret ? { secretCiphertext: encryptToken(secret, process.env.INTERNAL_API_SECRET ?? "") } : {}),
-    });
+    if (!secret) return;
+    const label = String(fd.get("label") ?? "").trim() || null;
+    await addIntegrationSecret(db, "linear", label, encryptToken(secret, process.env.INTERNAL_API_SECRET ?? ""));
+    revalidatePath("/integrations");
+  }
+
+  async function removeLinearSecretAction(fd: FormData) {
+    "use server";
+    await requireAdmin();
+    await removeIntegrationSecret(db, String(fd.get("id") ?? ""));
     revalidatePath("/integrations");
   }
 
   async function disconnectLinearAction() {
     "use server";
     await requireAdmin();
-    // Stop processing events (webhook honors enabled=false) and clear the signing secret.
-    await upsertIntegrationSetting(db, "linear", { enabled: false, secretCiphertext: null });
+    // Stop processing events (webhook honors enabled=false) and clear all signing secrets.
+    await removeAllIntegrationSecrets(db, "linear");
+    await upsertIntegrationSetting(db, "linear", { enabled: false });
     revalidatePath("/integrations");
   }
 
@@ -147,30 +157,52 @@ export default async function IntegrationsPage() {
           </p>
         </div>
 
-        <form action={saveLinearSecretAction} className="flex flex-wrap items-end gap-3 border-t border-border pt-5">
-          <Field
-            label="Signing secret (required)"
-            className="min-w-64 flex-1"
-            required
-            hint={
-              disabled
-                ? "Linear is disconnected. Paste the signing secret to reconnect."
-                : hasSecret
-                  ? "A signing secret is saved. Enter a new one to replace it."
-                  : "Required — Linear events are verified against this and rejected without it."
-            }
-          >
-            <Input type="password" name="secret" placeholder={hasSecret ? "••••••••••••" : "lin_wh_…"} autoComplete="off" />
-          </Field>
-          <Button type="submit" variant={needsSecret ? "accent" : "outline"}>
-            {disabled ? "Reconnect" : hasSecret ? "Update secret" : "Save secret"}
-          </Button>
-        </form>
+        <div className="space-y-3 border-t border-border pt-5">
+          <SectionTitle description="Each Linear webhook has its own signing secret. Add one per webhook you point here (e.g. one for all public teams, another scoped to specific private teams) — events are verified against any of them, and required.">
+            Signing secrets
+          </SectionTitle>
+
+          {secrets.length > 0 ? (
+            <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+              {secrets.map((s) => (
+                <li key={s.id} className="flex items-center gap-3 bg-card px-3.5 py-2.5">
+                  <KeyRound className="h-4 w-4 shrink-0 text-subtle-foreground" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-medium text-foreground">{s.label ?? "Webhook secret"}</p>
+                    <p className="text-[11.5px] text-subtle-foreground">
+                      Added {s.createdAt ? timeAgo(s.createdAt) : "—"}
+                    </p>
+                  </div>
+                  <form action={removeLinearSecretAction}>
+                    <input type="hidden" name="id" value={s.id} />
+                    <button
+                      type="submit"
+                      aria-label="Remove secret"
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-subtle-foreground transition-colors hover:bg-danger-subtle hover:text-danger"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <form action={addLinearSecretAction} className="flex flex-wrap items-end gap-3">
+            <Field label="Label" className="w-40">
+              <Input name="label" placeholder="Public teams" autoComplete="off" />
+            </Field>
+            <Field label={secrets.length > 0 ? "Add another signing secret" : "Signing secret"} className="min-w-56 flex-1">
+              <Input type="password" name="secret" placeholder="lin_wh_…" autoComplete="off" />
+            </Field>
+            <Button type="submit" variant={needsSecret ? "accent" : "outline"}>Add secret</Button>
+          </form>
+        </div>
 
         {connected ? (
           <form action={disconnectLinearAction} className="flex items-center justify-between gap-3 border-t border-border pt-4">
             <p className="text-[12.5px] leading-relaxed text-subtle-foreground">
-              Stop processing Linear events and clear the signing secret. Also delete the webhook in Linear.
+              Stop processing Linear events and remove all signing secrets. Also delete the webhook(s) in Linear.
             </p>
             <Button type="submit" variant="destructive" className="shrink-0">Disconnect</Button>
           </form>

@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lt, sql } from "drizzle-orm";
 import * as schema from "./schema";
 import type { IntegrationSetting, LinearActivity } from "./schema";
 import type { createDb } from "./client";
@@ -50,6 +50,52 @@ export async function recordIntegrationEvent(db: Db, provider: string): Promise<
       target: schema.integrationSettings.provider,
       set: { lastEventAt: new Date() },
     });
+}
+
+export interface IntegrationSecretMeta {
+  id: string;
+  label: string | null;
+  createdAt: Date | null;
+}
+
+/** Secrets for the Integrations UI — metadata only, never the ciphertext. */
+export function listIntegrationSecretMeta(db: Db, provider: string): Promise<IntegrationSecretMeta[]> {
+  return db
+    .select({ id: schema.integrationSecrets.id, label: schema.integrationSecrets.label, createdAt: schema.integrationSecrets.createdAt })
+    .from(schema.integrationSecrets)
+    .where(eq(schema.integrationSecrets.provider, provider))
+    .orderBy(asc(schema.integrationSecrets.createdAt));
+}
+
+/** The encrypted secrets to verify an incoming webhook against (any match passes). */
+export async function listIntegrationSecretCiphertexts(db: Db, provider: string): Promise<string[]> {
+  const rows = await db
+    .select({ c: schema.integrationSecrets.secretCiphertext })
+    .from(schema.integrationSecrets)
+    .where(eq(schema.integrationSecrets.provider, provider));
+  return rows.map((r) => r.c);
+}
+
+export async function countIntegrationSecrets(db: Db, provider: string): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(schema.integrationSecrets)
+    .where(eq(schema.integrationSecrets.provider, provider));
+  return row?.n ?? 0;
+}
+
+/** Add a signing secret (already encrypted) and mark the provider enabled. */
+export async function addIntegrationSecret(db: Db, provider: string, label: string | null, secretCiphertext: string): Promise<void> {
+  await db.insert(schema.integrationSecrets).values({ provider, label, secretCiphertext });
+  await upsertIntegrationSetting(db, provider, { enabled: true });
+}
+
+export async function removeIntegrationSecret(db: Db, id: string): Promise<void> {
+  await db.delete(schema.integrationSecrets).where(eq(schema.integrationSecrets.id, id));
+}
+
+export async function removeAllIntegrationSecrets(db: Db, provider: string): Promise<void> {
+  await db.delete(schema.integrationSecrets).where(eq(schema.integrationSecrets.provider, provider));
 }
 
 export interface LinearActivityInput {
