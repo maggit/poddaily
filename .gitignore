@@ -6,3 +6,9 @@ dist/
 supabase/.branches/
 supabase/.temp/
 *.log
+
+# Local agent/context files — not part of the open-source distribution
+CLAUDE.md
+ContextDB/todos/
+.claude/
+.remember/

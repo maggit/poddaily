@@ -52,9 +52,13 @@ pnpm db:migrate && pnpm seed      # schema + known-state data
 pnpm smoke:db                     # foundation end-to-end check (schema + seed + connectivity)
 pnpm smoke:auth                   # admin Slack-login flow against the stub
 
-# The admin web app (login + dashboard):
-pnpm --filter @poddaily/web dev   # → http://localhost:3000 (signed out → /login)
+# The admin web app (landing page, login + dashboard):
+pnpm --filter @poddaily/web dev   # → http://localhost:3000
 ```
+
+The web app serves a public landing page at `/`; the admin **sign-in page lives at `/team`**
+(intentionally unlinked from the landing page — share it with your team directly). Protected
+routes redirect there automatically.
 
 > **Current state (through Step 5a):** the commands above work today — the database layer,
 > the admin web app with Slack OAuth login, team/member/standup CRUD, and the scheduler +
@@ -298,11 +302,16 @@ the [project map](ContextDB/00_index/project-map.md): specs, architecture, and t
 
 ## Contributing
 
-This is an open-source project. Before working on a phase, read the relevant spec and ADRs in
-[`ContextDB/`](ContextDB/). Each phase ships with passing smoke tests, an updated README, and
-the live smoke runbook walked once (see the per-phase Definition of Done in
+Contributions are welcome — see **[CONTRIBUTING.md](CONTRIBUTING.md)** for the dev setup,
+project layout, and PR conventions. Before working on a phase, read the relevant spec and
+ADRs in [`ContextDB/`](ContextDB/). Each phase ships with passing smoke tests, an updated
+README, and the live smoke runbook walked once (see the per-phase Definition of Done in
 [Testing & Local Dev](ContextDB/02_architecture/testing-and-local-dev.md#definition-of-done-per-phase)).
+
+Found a security issue? Please use
+[private vulnerability reporting](https://github.com/maggit/poddaily/security/advisories/new)
+instead of a public issue.
 
 ## License
 
-TBD — to be set before the first public release.
+[MIT](LICENSE)
