@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { decryptToken } from "@poddaily/shared";
-import { getIntegrationSetting, upsertLinearActivity, recordIntegrationEvent } from "@poddaily/db";
+import { getIntegrationSetting, upsertLinearActivity, recordIntegrationEvent, listIntegrationSecretCiphertexts } from "@poddaily/db";
 import { db } from "@/lib/db";
 import { verifyLinearSignature, parseLinearIssueEvent } from "@/lib/linear";
 
@@ -30,19 +30,23 @@ export async function POST(req: NextRequest) {
 
   const setting = await getIntegrationSetting(db, "linear");
 
-  // Require a configured signing secret (default posture: verify). No secret → reject.
-  if (!setting?.secretCiphertext) {
+  // Require at least one signing secret (default posture: verify). Verify the signature against
+  // ANY of them — each Linear webhook has its own secret, so multiple webhooks can point here.
+  const ciphertexts = await listIntegrationSecretCiphertexts(db, "linear");
+  if (ciphertexts.length === 0) {
     console.warn("[linear-webhook] rejected — no signing secret configured");
     return NextResponse.json({ error: "signing secret not configured" }, { status: 401 });
   }
-  let secret = "";
-  try {
-    secret = decryptToken(setting.secretCiphertext, process.env.INTERNAL_API_SECRET ?? "");
-  } catch {
-    console.error("[linear-webhook] could not decrypt signing secret");
-    return NextResponse.json({ error: "server misconfigured" }, { status: 500 });
-  }
-  if (!verifyLinearSignature(raw, req.headers.get("linear-signature"), secret)) {
+  const signature = req.headers.get("linear-signature");
+  const apiSecret = process.env.INTERNAL_API_SECRET ?? "";
+  const verified = ciphertexts.some((c) => {
+    try {
+      return verifyLinearSignature(raw, signature, decryptToken(c, apiSecret));
+    } catch {
+      return false; // undecryptable secret — skip it
+    }
+  });
+  if (!verified) {
     console.warn("[linear-webhook] rejected — invalid signature");
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }

@@ -128,6 +128,17 @@ export const integrationSettings = pgTable("integration_settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
+// Webhook signing secrets for an integration — one row per external webhook (each Linear webhook
+// has its own secret). Incoming events are verified against ANY of a provider's secrets, so a
+// workspace can point several webhooks (e.g. all-public-teams + specific private teams) at us.
+export const integrationSecrets = pgTable("integration_secrets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  provider: text("provider").notNull(),
+  label: text("label"),
+  secretCiphertext: text("secret_ciphertext").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
 // Latest-known snapshot of each Linear issue we've received via webhook (upserted by issue id).
 // Only assigned issues are stored. Phase 2 matches assignee_email → app_users/directory email
 // and surfaces recently-completed issues in a member's "Previously" check-in block.
@@ -167,5 +178,7 @@ export type SlackDirectoryUser = typeof slackDirectoryUsers.$inferSelect;
 export type NewSlackDirectoryUser = typeof slackDirectoryUsers.$inferInsert;
 export type IntegrationSetting = typeof integrationSettings.$inferSelect;
 export type NewIntegrationSetting = typeof integrationSettings.$inferInsert;
+export type IntegrationSecret = typeof integrationSecrets.$inferSelect;
+export type NewIntegrationSecret = typeof integrationSecrets.$inferInsert;
 export type LinearActivity = typeof linearActivity.$inferSelect;
 export type NewLinearActivity = typeof linearActivity.$inferInsert;

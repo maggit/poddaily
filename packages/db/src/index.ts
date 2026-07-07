@@ -2,6 +2,7 @@ export * as schema from "./schema";
 export { createDb } from "./client";
 export { saveUserToken, getUserToken, hasUserToken, listConnectedUserIds } from "./tokens";
 export { upsertDirectoryUsers, searchDirectory, countDirectoryUsers, type DirectoryMemberInput, type DirectorySearchPage } from "./directory";
+export { listIntegrationSecretMeta, listIntegrationSecretCiphertexts, countIntegrationSecrets, addIntegrationSecret, removeIntegrationSecret, removeAllIntegrationSecrets, type IntegrationSecretMeta } from "./integrations";
 export { getIntegrationSetting, upsertIntegrationSetting, recordIntegrationEvent, upsertLinearActivity, countLinearActivity, pruneLinearActivity, listCompletedLinearIssues, resolveMemberEmail, listMemberLinearClosed, listUnmatchedLinearAssignees, countUnmatchedLinearAssignees, type LinearActivityInput, type UnmatchedAssignee } from "./integrations";
 export { finalizeRunIfDone } from "./runs";
 export { lastReportDateBefore } from "./reports";

@@ -4,6 +4,8 @@ import {
   getIntegrationSetting, upsertIntegrationSetting, recordIntegrationEvent,
   upsertLinearActivity, countLinearActivity, pruneLinearActivity, listCompletedLinearIssues,
   resolveMemberEmail, listMemberLinearClosed, listUnmatchedLinearAssignees, countUnmatchedLinearAssignees,
+  listIntegrationSecretMeta, listIntegrationSecretCiphertexts, countIntegrationSecrets,
+  addIntegrationSecret, removeIntegrationSecret, removeAllIntegrationSecrets,
   type LinearActivityInput,
 } from "./integrations";
 
@@ -24,6 +26,7 @@ function issue(id: string, over: Partial<LinearActivityInput> = {}): LinearActiv
 async function wipe() {
   await sql`delete from linear_activity where assignee_email in (${EMAIL}, ${UNMATCHED})`;
   await sql`delete from integration_settings where provider = 'test-provider'`;
+  await sql`delete from integration_secrets where provider = 'test-provider'`;
   await sql`delete from slack_directory_users where slack_user_id = ${MEMBER}`;
 }
 beforeEach(wipe);
@@ -40,6 +43,28 @@ describe("integration settings + linear activity", () => {
     s = await getIntegrationSetting(db, "test-provider");
     expect(s?.enabled).toBe(true);
     expect(s?.secretCiphertext).toBe("enc-1");
+  });
+
+  it("manages multiple signing secrets (add / list / verify-set / remove)", async () => {
+    await addIntegrationSecret(db, "test-provider", "Public teams", "cipher-A");
+    await addIntegrationSecret(db, "test-provider", null, "cipher-B");
+
+    // adding a secret enables the provider
+    expect((await getIntegrationSetting(db, "test-provider"))?.enabled).toBe(true);
+    expect(await countIntegrationSecrets(db, "test-provider")).toBe(2);
+
+    const meta = await listIntegrationSecretMeta(db, "test-provider");
+    expect(meta.map((m) => m.label)).toEqual(["Public teams", null]); // oldest first
+    expect(meta.every((m) => !("secretCiphertext" in m))).toBe(true); // metadata only, no ciphertext
+
+    const ciphers = await listIntegrationSecretCiphertexts(db, "test-provider");
+    expect(ciphers.sort()).toEqual(["cipher-A", "cipher-B"]);
+
+    // remove one by id, then all
+    await removeIntegrationSecret(db, meta[0].id);
+    expect(await countIntegrationSecrets(db, "test-provider")).toBe(1);
+    await removeAllIntegrationSecrets(db, "test-provider");
+    expect(await countIntegrationSecrets(db, "test-provider")).toBe(0);
   });
 
   it("recordIntegrationEvent creates a default-enabled row, then only bumps the timestamp", async () => {
