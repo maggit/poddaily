@@ -8,7 +8,7 @@ export const authConfig = {
   // Self-hosted behind a reverse proxy (Dokploy/Traefik) on a non-Vercel host — trust the
   // proxied host header, else Auth.js v5 throws UntrustedHost. Same as AUTH_TRUST_HOST=true.
   trustHost: true,
-  pages: { signIn: "/login" },
+  pages: { signIn: "/team" },
   providers: [
     {
       id: "slack",
@@ -31,7 +31,9 @@ export const authConfig = {
     },
   ],
   callbacks: {
-    authorized({ auth }) {
+    authorized({ auth, request }) {
+      // The landing page is public; it redirects signed-in users to /dashboard itself.
+      if (request.nextUrl.pathname === "/") return true;
       return !!auth?.user;
     },
     session({ session, token }) {

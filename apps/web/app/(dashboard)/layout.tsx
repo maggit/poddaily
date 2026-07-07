@@ -5,11 +5,11 @@ import { signOut } from "@/auth";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const me = await getCurrentUser();
-  if (!me) redirect("/login");
+  if (!me) redirect("/team");
 
   async function signOutAction() {
     "use server";
-    await signOut({ redirectTo: "/login" });
+    await signOut({ redirectTo: "/team" });
   }
 
   return (

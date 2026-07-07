@@ -20,8 +20,21 @@ const displayGrotesk = Schibsted_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "poddaily",
-  description: "Self-hosted Slack standup admin",
+  metadataBase: new URL(process.env.AUTH_URL ?? "https://poddaily.io"),
+  title: {
+    default: "poddaily — open-source Slack standup bot",
+    template: "%s · poddaily",
+  },
+  description:
+    "Self-hosted, open-source daily standup bot for Slack. Asks each teammate their standup questions over DM and posts one attributed summary to the team channel. Sign-in uses Slack's official OpenID Connect flow.",
+  openGraph: {
+    title: "poddaily — open-source Slack standup bot",
+    description:
+      "Self-hosted daily standups for Slack: DM-based questions, attributed channel summaries, timezone-aware scheduling. Source on GitHub.",
+    url: "/",
+    siteName: "poddaily",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

@@ -34,7 +34,7 @@ export default async function SettingsPage() {
 
   async function signOutAction() {
     "use server";
-    await signOut({ redirectTo: "/login" });
+    await signOut({ redirectTo: "/team" });
   }
 
   async function resyncDirectoryAction() {
