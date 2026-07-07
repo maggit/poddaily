@@ -1,47 +1,69 @@
+import type { Metadata } from "next";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
+import { GITHUB_URL, LandingShell } from "@/components/landing/shell";
+
+export const metadata: Metadata = {
+  title: "Team sign-in",
+  description: "Sign in to poddaily with your Slack workspace account.",
+};
+
+const TICK_POSITIONS = ["-top-1 -left-1", "-top-1 -right-1", "-bottom-1 -left-1", "-bottom-1 -right-1"] as const;
 
 export default function LoginPage() {
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden p-6">
-      {/* ambient backdrop */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/3 h-[480px] w-[480px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/20 blur-[120px]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.04] [background-image:radial-gradient(circle,white_1px,transparent_1px)] [background-size:22px_22px]"
-      />
-
-      <div className="reveal relative w-full max-w-sm rounded-2xl border border-border bg-card p-8 text-center shadow-lg">
-        <Image src="/logo.svg" alt="" width={56} height={56} unoptimized className="mx-auto h-14 w-14" />
-        <h1 className="mt-5 font-heading text-2xl font-semibold tracking-tight text-foreground">poddaily</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Sign in to manage your team&apos;s standups.</p>
-        <form
-          className="mt-7"
-          action={async () => {
-            "use server";
-            const { signIn } = await import("@/auth");
-            await signIn("slack", { redirectTo: "/dashboard" });
-          }}
-        >
-          <Button type="submit" size="lg" className="w-full">
-            Sign in with Slack
-          </Button>
-        </form>
-        <p className="mt-5 text-xs leading-relaxed text-subtle-foreground">
-          Uses Slack&apos;s official OpenID Connect sign-in — your password never touches this
-          site. poddaily is{" "}
-          <a
-            href="https://github.com/maggit/poddaily"
-            className="underline underline-offset-2 hover:text-muted-foreground"
+    <LandingShell
+      nav={[
+        { href: "/", label: "Home" },
+        { href: GITHUB_URL, label: "GitHub" },
+      ]}
+    >
+      <main className="flex min-h-[70vh] items-center justify-center py-16">
+        <div className="reveal w-full max-w-sm border border-border bg-card/80 p-8 text-center backdrop-blur-sm">
+          <Image src="/logo.svg" alt="" width={64} height={64} unoptimized className="mx-auto h-16 w-16" />
+          <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.25em] text-accent">Team access</p>
+          <h1 className="mt-3 font-heading text-3xl font-bold tracking-tight">poddaily</h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Sign in to manage your team&apos;s standups.
+          </p>
+          <form
+            className="mt-8"
+            action={async () => {
+              "use server";
+              const { signIn } = await import("@/auth");
+              await signIn("slack", { redirectTo: "/dashboard" });
+            }}
           >
-            open source
-          </a>
-          .
-        </p>
-      </div>
-    </main>
+            <span className="group relative block">
+              {TICK_POSITIONS.map((pos) => (
+                <span
+                  key={pos}
+                  aria-hidden
+                  className={`absolute ${pos} h-2 w-2 border-accent/70 ${
+                    pos.includes("top") ? "border-t" : "border-b"
+                  } ${pos.includes("left") ? "border-l" : "border-r"}`}
+                />
+              ))}
+              <button
+                type="submit"
+                className="h-11 w-full border border-accent/60 bg-accent/10 text-sm font-medium tracking-tight text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                Sign in with Slack
+              </button>
+            </span>
+          </form>
+          <p className="mt-6 text-xs leading-relaxed text-subtle-foreground">
+            Uses Slack&apos;s official OpenID Connect sign-in — your password never touches this
+            site. poddaily is{" "}
+            <a
+              href={GITHUB_URL}
+              className="underline underline-offset-2 transition-colors hover:text-muted-foreground"
+            >
+              open source
+            </a>
+            .
+          </p>
+        </div>
+      </main>
+    </LandingShell>
   );
 }
