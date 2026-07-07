@@ -166,6 +166,80 @@
   --accent-strong: #7c9bff;
 }
 
+/* ── Landing page theme — turquoise on deep blue-gray, light + dark ──────────────
+   Scoped to the marketing landing (`.landing` wrapper); the admin app keeps the
+   Crisp Product tokens above. `.landing.dark` composes with the existing `dark`
+   custom-variant, so `dark:` utilities work inside it. */
+.landing {
+  --font-display: var(--font-landing), var(--font-geist-sans), sans-serif;
+  --background: #f2f6f6;
+  --foreground: #0b1a21;
+  --card: #fbfdfd;
+  --card-foreground: #0b1a21;
+  --secondary: #e3ebeb;
+  --secondary-foreground: #0b1a21;
+  --muted: #e8efef;
+  --muted-foreground: #47606b;
+  --subtle-foreground: #7b909a;
+  --accent: #0d9488;
+  --accent-foreground: #ffffff;
+  --accent-strong: #0b7a70;
+  --accent-subtle: #d7f1ed;
+  --border: #d3dfe1;
+  --input: #c8d7d9;
+  --ring: #0d9488;
+  --landing-grid: rgb(11 26 33 / 0.055);
+  --landing-glow: rgb(13 148 136 / 0.12);
+  --landing-grain-opacity: 0.028;
+}
+.landing.dark {
+  --background: #0a141c;
+  --foreground: #edf5f5;
+  --card: #0e1b25;
+  --card-foreground: #edf5f5;
+  --secondary: #152431;
+  --secondary-foreground: #dcebea;
+  --muted: #152431;
+  --muted-foreground: #8fa6ae;
+  --subtle-foreground: #5a727b;
+  --accent: #2ee0cb;
+  --accent-foreground: #04211d;
+  --accent-strong: #8aeee1;
+  --accent-subtle: #0e2b30;
+  --border: #1b2b37;
+  --input: #243844;
+  --ring: #2ee0cb;
+  --landing-grid: rgb(237 245 245 / 0.05);
+  --landing-glow: rgb(46 224 203 / 0.15);
+  --landing-grain-opacity: 0.05;
+}
+
+@layer utilities {
+  /* faint blueprint grid */
+  .landing-grid-bg {
+    background-image:
+      linear-gradient(var(--landing-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--landing-grid) 1px, transparent 1px);
+    background-size: 72px 72px;
+  }
+  /* film-grain overlay — apply to a positioned container */
+  .landing-grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: var(--landing-grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  /* headline ink→turquoise sweep */
+  .landing-hero-text {
+    background-image: linear-gradient(100deg, var(--foreground) 52%, var(--accent) 115%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

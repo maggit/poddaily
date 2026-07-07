@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Schibsted_Grotesk } from "next/font/google";
+import { Bricolage_Grotesque, Geist, Geist_Mono, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,6 +17,13 @@ const displayGrotesk = Schibsted_Grotesk({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
+});
+
+// Landing-page display face — chunky, characterful grotesk (Hex-inspired look).
+// Scoped via the .landing theme in globals.css; the admin app keeps Schibsted.
+const landingGrotesk = Bricolage_Grotesque({
+  variable: "--font-landing",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -43,10 +50,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${displayGrotesk.variable} min-h-screen bg-background text-foreground antialiased`}
-      >
+    <html
+      lang="en"
+      // Font variables live on <html> — globals.css references them from the `html`
+      // rule itself, where body-level custom properties would be invisible.
+      className={`${geistSans.variable} ${geistMono.variable} ${displayGrotesk.variable} ${landingGrotesk.variable}`}
+    >
+      <body className="min-h-screen bg-background text-foreground antialiased">
         {children}
       </body>
     </html>
