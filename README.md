@@ -13,25 +13,77 @@ infrastructure.
 
 ## Features
 
-Checked items are implemented; unchecked are planned. Updated at the end of each phase.
+Everything below is implemented and shipping today. See the [roadmap](#roadmap) for
+what's next and the [PRD](ContextDB/01_specs/poddaily-prd.md) for the full scope.
 
-**Phase 1 — Core**
-- [x] Slack OAuth admin login
-- [x] Team CRUD (name, Slack channel, tribe)
-- [x] Member management with per-member permissions + timezone capture
-- [x] Standup configuration (questions, schedule, intro/outro)
-- [x] Per-user-timezone scheduler (Step 5a — outbound DM only; Q&A engine in 5b)
-- [x] Conversational DM Q&A (one question at a time, skip / skip all, 4h timeout)
-- [x] Channel broadcast posted as the user, directly in the channel (with a live "Reported n/total" header)
-  - Connected members post via their own Slack user token (true authorship, no "APP" badge, counts as a user message in Slack analytics); unconnected members fall back to a bot post (`chat:write.customize`) with a "Connect" nudge — Step 6a delivered the broadcast/threading, Step 6b the post-as-user
-- [x] Reports dashboard (today + history, per-person check-in feed with Slack avatars) — admin-only
-- [x] Re-trigger a missed/timed-out standup via a DM keyword (`redo` / `restart` / `start` / `standup`)
+<!-- Screenshots: drop images into docs/screenshots/ and uncomment the placeholders below. -->
 
-**Phase 2 — Admin UX:** reports dashboard ✅ (A), reminders ✅ (B), pause/resume + Slack-connected
-badge ✅ (C), RBAC tiers ✅ (D) — **Phase 2 is complete.**
-**Phase 4 — P1:** analytics, ~~`/standup` slash command~~ ✅, Databricks export webhook, streaks.
+### Standups in Slack
 
-See the full [roadmap](#roadmap) and the [PRD](ContextDB/01_specs/poddaily-prd.md) for scope.
+- **Conversational DM Q&A** — the bot asks each member their questions one at a time in a
+  DM; `skip` skips a question, `skip all` skips the day.
+- **Per-user-timezone scheduling** — every member is asked on their own clock, on the
+  days the standup is configured to run.
+- **Channel broadcast, attributed to the author** — completed check-ins post directly to
+  the team channel under a live `📋 Reported n/total` header. Members who connect their
+  Slack account post **as themselves** (a true user message, no "APP" badge); everyone
+  else gets a bot post with their name and avatar plus a "Connect" nudge.
+- **Reminders** — recurring DM nudges (per-standup interval, default 60 min) until the
+  member finishes or times out.
+- **Inactivity timeout** — a report only times out after a configurable silent period
+  (default 4 h); the clock resets on every reply, so answering across the morning is fine.
+- **Catch-up on demand** — DM the bot `redo` / `restart` / `start` / `standup` to re-run
+  a missed or timed-out standup.
+- **`/standup` slash command** — `start`, `status`, and `help` from any channel, with
+  ephemeral replies; the Q&A itself stays in the DM.
+- **Late-join delivery** — a member added (or granted Report permission) mid-day still
+  receives today's standup if the run is open.
+- **Pause / resume** — pause a standup without losing its configuration; in-flight runs
+  finish, no new ones are sent.
+
+<!-- ![Standup DM Q&A](docs/screenshots/standup-dm.png) -->
+<!-- ![Channel broadcast](docs/screenshots/channel-broadcast.png) -->
+
+### Admin web app
+
+- **Sign in with Slack** — official OpenID Connect flow; no passwords to manage.
+- **Team (pod) management** — create teams, set the Slack channel and tribe, manage
+  members with per-member permissions and timezone capture.
+- **Standup configuration** — questions, schedule, intro/outro text, and the reminder
+  interval, per team.
+- **Reports dashboard** — today's participation across all teams, plus per-team history:
+  a feed of per-person check-in cards with Slack avatars and full answers.
+- **Role-based access** — `viewer` / `manager` / `admin` tiers; the first login on a
+  fresh install bootstraps as admin, and the last admin can never be demoted, so an
+  install can't lock itself out.
+- **Slack-connected badge** — see at a glance which members post as themselves.
+- **Public landing + private sign-in** — `/` is an informative landing page; the actual
+  sign-in lives at the unlinked `/team`.
+- **Reskin from one file** — every design token lives in `apps/web/app/globals.css`;
+  change `--accent` once and the whole app follows.
+
+<!-- ![Reports dashboard](docs/screenshots/reports-dashboard.png) -->
+<!-- ![Standup configuration](docs/screenshots/standup-config.png) -->
+
+### Integrations
+
+- **Linear** — a signature-verified webhook (multiple signing secrets supported)
+  ingests assigned-issue activity, matches people to team members by email, and surfaces
+  each member's closed issues alongside their check-ins in reports. Includes an
+  unmatched-people view, a last-event health indicator, retention pruning, and a
+  disconnect control.
+
+<!-- ![Integrations](docs/screenshots/integrations.png) -->
+
+### Self-hosting & operations
+
+- **Runs entirely on your infrastructure** — Docker services (`web`, `api`, `worker`,
+  Redis) with runbooks for Dokploy and Railway; Postgres via Supabase (cloud or CLI).
+- **No per-seat cost, your data stays yours.**
+- **Secure by default** — Slack request-signature verification, AES-GCM-encrypted user
+  tokens at rest, all secrets via environment variables.
+- **Developable offline** — a bundled Slack API stub means local dev and the entire
+  `smoke:*` test suite need no Slack workspace or external accounts.
 
 ## Tech stack
 
@@ -299,6 +351,9 @@ the [project map](ContextDB/00_index/project-map.md): specs, architecture, and t
 | 2 — Admin UX ✅ | Reports dashboard ✅ (A), reminders ✅ (B), pause/resume + connected badge ✅ (C), RBAC tiers ✅ (D) |
 | 3 — Polish + launch | Deploy, env config, docs, pilot |
 | 4 — P1 features | Analytics, ~~slash command~~ ✅, export webhook, streaks |
+
+**Up next:** standup analytics · Databricks export webhook · participation streaks ·
+email invites for viewers (via Resend) as part of admin onboarding.
 
 ## Contributing
 
