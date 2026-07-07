@@ -8,5 +8,5 @@ export const config = {
   // to the sign-in page. `team` is the sign-in page itself; `login` is its legacy redirect.
   // The dashboard search API stays protected (it's not excluded here).
   // NB: `team$` is anchored so the protected /teams/* dashboard routes still match.
-  matcher: ["/((?!team$|login|api/auth|api/integrations|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!team$|install$|login|api/auth|api/integrations|_next/static|_next/image|favicon.ico).*)"],
 };

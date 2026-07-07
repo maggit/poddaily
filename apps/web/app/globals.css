@@ -188,7 +188,6 @@
   --border: #d3dfe1;
   --input: #c8d7d9;
   --ring: #0d9488;
-  --landing-grid: rgb(11 26 33 / 0.055);
   --landing-glow: rgb(13 148 136 / 0.12);
   --landing-grain-opacity: 0.028;
 }
@@ -209,19 +208,11 @@
   --border: #1b2b37;
   --input: #243844;
   --ring: #2ee0cb;
-  --landing-grid: rgb(237 245 245 / 0.05);
   --landing-glow: rgb(46 224 203 / 0.15);
   --landing-grain-opacity: 0.05;
 }
 
 @layer utilities {
-  /* faint blueprint grid */
-  .landing-grid-bg {
-    background-image:
-      linear-gradient(var(--landing-grid) 1px, transparent 1px),
-      linear-gradient(90deg, var(--landing-grid) 1px, transparent 1px);
-    background-size: 72px 72px;
-  }
   /* film-grain overlay — apply to a positioned container */
   .landing-grain::after {
     content: "";
