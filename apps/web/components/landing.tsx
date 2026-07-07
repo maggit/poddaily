@@ -340,13 +340,25 @@ export function Landing() {
             </section>
           </main>
 
-          <footer className="flex flex-col gap-2 border-t border-border py-8 font-mono text-[11px] text-subtle-foreground sm:flex-row sm:items-center sm:justify-between">
-            <p>
-              poddaily — an open-source standup bot ·{" "}
-              <a href={GITHUB_URL} className="underline underline-offset-2 transition-colors hover:text-foreground">
-                source on GitHub
-              </a>
-            </p>
+          <footer className="space-y-2 border-t border-border py-8 font-mono text-[11px] text-subtle-foreground">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p>
+                poddaily — an open-source standup bot ·{" "}
+                <a href={GITHUB_URL} className="underline underline-offset-2 transition-colors hover:text-foreground">
+                  source on GitHub
+                </a>{" "}
+                ·{" "}
+                <a
+                  href={`${GITHUB_URL}/blob/main/LICENSE`}
+                  className="underline underline-offset-2 transition-colors hover:text-foreground"
+                >
+                  MIT license
+                </a>
+              </p>
+              <p>
+                Made with <span className="text-accent">♥</span> by Raquel Hernandez
+              </p>
+            </div>
             <p>this deployment is a private instance for internal team use</p>
           </footer>
         </div>
