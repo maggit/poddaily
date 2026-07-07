@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-labelledby="title desc">
+  <title id="title">PodDaily Winky Bot Logo</title>
+  <desc id="desc">A friendly cartoon robot head with turquoise accents, one open eye, one winking eye, and a smile.</desc>
+
+  <defs>
+    <linearGradient id="turquoise" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3ff5e0"/>
+      <stop offset="100%" stop-color="#2ee0cb"/>
+    </linearGradient>
+
+    <linearGradient id="turquoiseDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2ee0cb"/>
+      <stop offset="100%" stop-color="#14b8aa"/>
+    </linearGradient>
+
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#111719"/>
+      <stop offset="100%" stop-color="#05090a"/>
+    </linearGradient>
+
+    <linearGradient id="bodyShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="80%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#d8fbf7"/>
+    </linearGradient>
+
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#082f35" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- soft floor shadow -->
+  <ellipse cx="400" cy="678" rx="205" ry="33" fill="#0b2730" opacity="0.11"/>
+
+  <!-- antenna -->
+  <rect x="379" y="170" width="42" height="87" rx="18" fill="#073d42"/>
+  <circle cx="400" cy="158" r="45" fill="#073d42"/>
+  <circle cx="400" cy="158" r="31" fill="url(#turquoiseDark)"/>
+  <circle cx="388" cy="143" r="10" fill="#ffffff" opacity="0.65"/>
+
+  <!-- ears -->
+  <g filter="url(#softShadow)">
+    <path d="M167 378 C122 388 98 423 98 480 C98 540 128 577 175 586 C194 590 205 574 205 551 L205 410 C205 388 190 373 167 378 Z" fill="url(#turquoise)" stroke="#073d42" stroke-width="22" stroke-linejoin="round"/>
+    <path d="M633 378 C678 388 702 423 702 480 C702 540 672 577 625 586 C606 590 595 574 595 551 L595 410 C595 388 610 373 633 378 Z" fill="url(#turquoise)" stroke="#073d42" stroke-width="22" stroke-linejoin="round"/>
+    <path d="M151 439 C126 453 121 512 151 545 C163 559 181 563 193 562 L193 410 C174 413 160 426 151 439 Z" fill="#9ff8ee" opacity="0.45"/>
+    <path d="M649 439 C674 453 679 512 649 545 C637 559 619 563 607 562 L607 410 C626 413 640 426 649 439 Z" fill="#9ff8ee" opacity="0.45"/>
+  </g>
+
+  <!-- head outer -->
+  <path d="M400 249
+           C255 249 154 306 145 451
+           C137 588 231 657 400 657
+           C569 657 663 588 655 451
+           C646 306 545 249 400 249 Z"
+        fill="url(#bodyShade)" stroke="#073d42" stroke-width="24" stroke-linejoin="round" filter="url(#softShadow)"/>
+
+  <!-- subtle lower highlight -->
+  <path d="M187 552
+           C237 631 326 638 400 638
+           C474 638 563 631 613 552
+           C572 610 493 620 400 620
+           C307 620 228 610 187 552 Z"
+        fill="#c9faf5" opacity="0.75"/>
+
+  <!-- face screen -->
+  <path d="M400 334
+           C264 334 189 370 188 476
+           C187 584 266 613 400 613
+           C534 613 613 584 612 476
+           C611 370 536 334 400 334 Z"
+        fill="url(#screen)"/>
+
+  <!-- open eye -->
+  <circle cx="305" cy="461" r="31" fill="url(#turquoise)"/>
+
+  <!-- winky eye -->
+  <path d="M499 455
+           C529 436 558 433 574 443
+           C586 450 586 468 573 474
+           C558 482 540 486 518 504
+           C506 514 486 510 480 497
+           C474 483 482 467 499 455 Z"
+        fill="url(#turquoise)"/>
+
+  <!-- smile -->
+  <path d="M356 524
+           C377 551 423 552 445 524"
+        fill="none" stroke="url(#turquoise)" stroke-width="22" stroke-linecap="round"/>
+
+  <!-- optional small sparkle, hidden by default for cleaner small icon -->
+  <g id="sparkle" opacity="0">
+    <path d="M580 190 L599 231 L640 250 L599 269 L580 310 L561 269 L520 250 L561 231 Z" fill="#2ee0cb"/>
+  </g>
+</svg>

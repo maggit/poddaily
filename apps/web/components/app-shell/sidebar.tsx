@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Users, ListChecks, MessageSquare, Settings, Shield, LogOut, Blocks, type LucideIcon } from "lucide-react";
@@ -54,9 +55,7 @@ export function Sidebar({ userName, isAdmin, signOutAction, className, onNavigat
   return (
     <aside className={cn("flex w-64 flex-col border-r border-border bg-surface-muted/60 px-3 pb-3", className)}>
       <div className="flex items-center gap-2.5 px-2.5 py-4">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-[13px] font-semibold text-accent-foreground shadow-sm">
-          p
-        </span>
+        <Image src="/logo.svg" alt="" width={28} height={28} unoptimized className="h-7 w-7" />
         <span className="font-heading text-[15px] font-semibold tracking-tight">poddaily</span>
       </div>
 

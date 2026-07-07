@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -126,9 +127,7 @@ export function LandingShell({
         <div className="relative mx-auto max-w-5xl px-6">
           <header className="reveal flex items-center justify-between py-6">
             <Link href="/" className="flex items-center gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center border border-accent/60 bg-accent/10 font-heading text-sm font-bold text-accent">
-                p
-              </span>
+              <Image src="/logo.svg" alt="" width={36} height={36} unoptimized className="h-9 w-9" />
               <span className="font-heading text-lg font-bold tracking-tight">poddaily</span>
             </Link>
             <nav className="flex items-center gap-2.5">

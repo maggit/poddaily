@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
@@ -14,9 +15,7 @@ export default function LoginPage() {
       />
 
       <div className="reveal relative w-full max-w-sm rounded-2xl border border-border bg-card p-8 text-center shadow-lg">
-        <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-lg font-semibold text-accent-foreground shadow-sm">
-          p
-        </span>
+        <Image src="/logo.svg" alt="" width={56} height={56} unoptimized className="mx-auto h-14 w-14" />
         <h1 className="mt-5 font-heading text-2xl font-semibold tracking-tight text-foreground">poddaily</h1>
         <p className="mt-2 text-sm text-muted-foreground">Sign in to manage your team&apos;s standups.</p>
         <form
