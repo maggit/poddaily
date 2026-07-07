@@ -19,7 +19,7 @@ const displayGrotesk = Schibsted_Grotesk({
   weight: ["500", "600", "700"],
 });
 
-// Landing-page display face — chunky, characterful grotesk (Hex-inspired look).
+// Landing-page display face — chunky, characterful grotesk for the marketing pages.
 // Scoped via the .landing theme in globals.css; the admin app keeps Schibsted.
 const landingGrotesk = Bricolage_Grotesque({
   variable: "--font-landing",

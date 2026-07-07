@@ -7,7 +7,7 @@ every UI build step. It synthesizes three references the owner provided:
   **dark, serif-accented auth/marketing** surface and a **light, clean product app** (icon
   sidebar, hairline-bordered data tables, status pills, solid-black primary buttons, generous
   whitespace, mono for code/IDs).
-- **Steady / Status Hero** — the *standup domain patterns*: the check-in **feed**
+- **Standup-tool references** — the *standup domain patterns*: the check-in **feed**
   (Next / Previously, activity rollups, reactions), the right-rail **Stats** (Participation,
   Intentions met, Blockers, Feeling as colored progress bars), and the **Roster** (avatars
   with colored status rings). Indigo/violet accent, quick calm tab transitions.
@@ -15,11 +15,11 @@ every UI build step. It synthesizes three references the owner provided:
   reporter avatars (reported vs not), the member **permission table** (View/Report/Edit),
   the **schedule picker** (weekday chips + time + tz), the **question editor**.
 
-**Core principle:** Resend's restraint and polish, carrying Steady's standup-native components,
+**Core principle:** Resend's restraint and polish, carrying the references' standup-native components,
 laid out with the reference admin information density.
 
 > ⚠️ **Updated 2026-06-27 — "Crisp Product" polish pass.** The accent, type, elevation, and
-> motion decisions below were revised after a Clerk/Hex-referenced redesign. The sections from
+> motion decisions below were revised after a reference-driven redesign. The sections from
 > here to "Provenance" are the **original 2026-06-16 direction** and are kept for history; where
 > they conflict with the current system, **[Polish pass — 2026-06-27](#polish-pass--2026-06-27-crisp-product) at the
 > bottom of this file is authoritative.** Headline deltas: indigo `#6366F1` → cobalt `#2D5BFF`;
@@ -44,7 +44,7 @@ laid out with the reference admin information density.
 | `--muted-foreground` | `#71717A` (zinc-500) | secondary text |
 | `--subtle-foreground` | `#A1A1AA` (zinc-400) | tertiary / captions |
 | `--primary` | `#18181B` | solid primary buttons (white text) — Resend |
-| `--accent` | `#6366F1` (indigo-500) | active nav, links, focus rings, highlights — Steady-flavored |
+| `--accent` | `#6366F1` (indigo-500) | active nav, links, focus rings, highlights |
 | `--accent-foreground` | `#FFFFFF` | text on accent |
 
 ### Dark auth (`/login`)
@@ -67,7 +67,7 @@ laid out with the reference admin information density.
 | Warning / OOO | amber `#F59E0B` | `bg-amber-50 text-amber-700` | amber |
 
 Stats bars (Participation/Blockers/Feeling) use these semantic colors as filled progress
-tracks on a light track (`#F1F1F3`), mirroring Steady.
+tracks on a light track (`#F1F1F3`), mirroring the reference.
 
 ## Typography
 
@@ -108,24 +108,24 @@ tracks on a light track (`#F1F1F3`), mirroring Steady.
   uppercase labels, hairline row dividers, row hover `#FAFAFA`, trailing `…` action menu,
   status pills inline. (Resend Emails table.)
 - **Status pill:** tinted bg + colored text per the semantic table.
-- **Avatar + status ring:** roster/participants; ring color = report status. (Steady Roster.)
+- **Avatar + status ring:** roster/participants; ring color = report status. (Reference roster pattern.)
 - **Participation bar:** horizontal track, reporter avatars clustered (reported left,
   not-reported right), % label — the reference Insights pattern in this palette.
 - **Stats rail:** stacked labeled colored progress bars (Participation, Blockers, Feeling) —
-  Steady right rail.
+  reference right rail.
 - **Buttons:** primary = solid `--primary` (black) / white text; secondary = white + border;
   ghost = text-only; destructive = red. Pills/rounded-md.
 - **Forms:** labeled fields, hairline inputs, accent focus ring. Includes the **schedule
   picker** (weekday chips M/T/W/Th/F, time input, tz dropdown) and the **question editor**
   (draggable rows, inline edit, add/delete).
 - **Feed card** (reports/timeline, later steps): avatar + name + timestamp, Next/Previously or
-  Q&A blocks, activity rollups, 👍 reactions, Comment affordance. (Steady check-in card.)
+  Q&A blocks, activity rollups, 👍 reactions, Comment affordance. (Reference check-in card.)
 - **Login (dark):** centered card on near-black, serif "poddaily" headline + muted subtext,
   "Sign in with Slack" refined dark button. Optional subtle grayscale gradient backdrop.
 
 ## Motion
 
-Calm and quick (Steady-like). 150–200ms ease for hover, tab/route content fade-slide,
+Calm and quick. 150–200ms ease for hover, tab/route content fade-slide,
 menu/modal open. Nothing bouncy; restraint over flourish.
 
 ## Implementation notes
@@ -135,7 +135,7 @@ menu/modal open. Nothing bouncy; restraint over flourish.
   the product stays light while auth stays dark.
 - Geist Sans/Mono come from the scaffold; add the display serif (Instrument Serif) via
   `next/font`.
-- **Brand accent: indigo `#6366F1`** (Steady-flavored) — **decided & signed off 2026-06-16**.
+- **Brand accent: indigo `#6366F1`** — **decided & signed off 2026-06-16**.
   Used sparingly for active nav, links, focus rings, and key highlights; semantic status
   colors (green/amber/red) carry meaning on top.
 
@@ -163,8 +163,8 @@ This is the path for the later "polish" pass — change tokens/components in pla
 
 ## Provenance
 
-Owner-provided references on 2026-06-16: Resend screenshots (Mobbin), a Steady/Status Hero
-check-ins screenshot, and a 4.5s Steady walkthrough clip (team-tab navigation + feed + stats
+Owner-provided references on 2026-06-16: Resend screenshots (Mobbin), a standup-tool
+check-ins screenshot, and a 4.5s walkthrough clip (team-tab navigation + feed + stats
 rail + roster). Stored as the basis for [phase-1-core-spec.md](../01_specs/phase-1-core-spec.md) §8 UI.
 
 ---
@@ -172,7 +172,7 @@ rail + roster). Stored as the basis for [phase-1-core-spec.md](../01_specs/phase
 ## Polish pass — 2026-06-27 (Crisp Product)
 
 **This section is authoritative** where it conflicts with the original direction above.
-References: Clerk + Hex admin dashboards (owner-provided via Mobbin). Direction chosen:
+References: two modern admin dashboards (owner-provided via Mobbin). Direction chosen:
 **Crisp product** — cool-white canvas, true-black ink, an all-grotesk type system, and a single
 saturated **cobalt** accent used sparingly. Goal: a refined, "designed" SaaS-admin feel without
 the indigo-on-zinc generic look.
@@ -246,7 +246,7 @@ once → every active state updates.
 3. **Toggle/select action errors** — quick actions (role select, permission toggles, manager
    assign/remove, pause/resume, member remove) still throw to the error boundary; only the three
    main forms have inline feedback.
-4. **Richer report visuals** — Steady-style participation bar + stats rail (from the original
+4. **Richer report visuals** — reference-style participation bar + stats rail (from the original
    direction) still not built; reports are cards + table.
 5. **Branding** — favicon / app-icon / OG image.
 6. **Visual QA** — authenticated screens not yet screenshotted (needs live DB + Slack session).

@@ -23,7 +23,7 @@ tools that runs on internal infrastructure with no per-seat cost.
 | [Scheduler](../02_architecture/scheduler.md) | Per-user-TZ BullMQ scheduling |
 | [Testing & local dev](../02_architecture/testing-and-local-dev.md) | Local setup, per-phase smoke tests, Slack stub, live runbook |
 | [Deployment (Dokploy + Supabase)](../02_architecture/deployment-dokploy.md) | From-zero hosting runbook — the chosen host (Railway alt: [deployment-railway](../02_architecture/deployment-railway.md)) |
-| [Design direction](../04_knowledge/design-direction.md) | UI/UX system (Resend + Steady + reference-layout synthesis) — source of truth for all UI |
+| [Design direction](../04_knowledge/design-direction.md) | UI/UX system (reference-layout synthesis) — source of truth for all UI |
 
 ## Decisions (ADRs)
 

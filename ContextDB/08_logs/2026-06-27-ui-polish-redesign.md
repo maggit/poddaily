@@ -1,7 +1,7 @@
 # 2026-06-27 — UI polish redesign ("Crisp Product")
 
 A design polish pass on the admin web app (`apps/web`), triggered by the owner: the UI looked
-"clunky and un-styled." References provided: Clerk + Hex admin dashboards (Mobbin). Chosen
+"clunky and un-styled." References provided: two modern admin dashboards (via Mobbin). Chosen
 direction: **Crisp Product** — cool-white canvas, true-black ink, all-grotesk type, a single
 sparing **cobalt** accent. Full system documented in
 [design-direction.md → Polish pass 2026-06-27](../04_knowledge/design-direction.md#polish-pass--2026-06-27-crisp-product).

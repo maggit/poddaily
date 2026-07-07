@@ -16,7 +16,7 @@ Three merges to `main`:
 (The redesign landed as one large commit `526e627`; the auth fix as `a818d8f`.)
 
 ### 1. "Crisp Product" UI redesign
-Reworked the admin app from the default shadcn/indigo-on-zinc look into a Clerk/Hex-grade system:
+Reworked the admin app from the default shadcn/indigo-on-zinc look into a reference-grade system:
 cool-white canvas, true-black ink, **Geist body + Schibsted Grotesk display**, a single **cobalt**
 accent (`#2D5BFF`) used sparingly, layered shadow tokens, and staggered `.reveal` load motion.
 - **Root-cause bug fixed:** `--font-sans` was a circular self-reference, so the app had been
@@ -158,7 +158,7 @@ opaque value that **rotates** between logins — not the Slack user id.
 5. **Dark-mode toggle.** Both token sets exist; product is light-only. Add a switcher
    (cookie/localStorage + `.dark` on `<html>`).
 6. **⌘K command palette.** The `top-bar` search affordance is currently decorative.
-7. **Richer report visuals.** Steady-style participation bar + stats rail (in the original
+7. **Richer report visuals.** Reference-style participation bar + stats rail (in the original
    design-direction) not yet built; reports are cards + table.
 8. **Branding.** favicon / app icon / OG image.
 
