@@ -2,6 +2,8 @@
 
 > Self-hosted, Slack-native daily standup bot + admin platform. Open-source, no per-seat cost.
 
+**Website:** [poddaily.io](https://poddaily.io/) · **Installation guide:** [poddaily.io/install](https://poddaily.io/install)
+
 **Status:** Phase 1 (Core) is **feature-complete** — all 7 build steps land with automated
 smokes green in CI; the remaining gates are the live-workspace runbook walks. This README and
 the feature checklist below grow as each phase lands.
