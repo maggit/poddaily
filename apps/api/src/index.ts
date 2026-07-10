@@ -15,9 +15,27 @@ const queue = new Queue(QUEUE_NAME, { connection: { url: process.env.REDIS_URL }
 const enqueueRetrigger = (job: RetriggerJob) =>
   queue.add("retrigger", job, { attempts: 3, backoff: { type: "exponential", delay: 30_000 }, removeOnComplete: true, removeOnFail: false }).then(() => undefined);
 
+// Honor the SLACK_API_BASE_URL stub override for Bolt's own WebClient too (same
+// normalization as packages/slack-client), so the api runs offline against the stub.
+const stubBase = process.env.SLACK_API_BASE_URL;
+const slackApiUrl = stubBase ? `${stubBase.replace(/\/+$/, "").replace(/\/api$/, "")}/api/` : undefined;
+
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
   signingSecret: process.env.SLACK_SIGNING_SECRET,
+  ...(slackApiUrl ? { clientOptions: { slackApiUrl } } : {}),
+  // GET /health — container healthcheck. Process liveness only; DB/Redis reachability
+  // is reported by the web app's /api/health.
+  customRoutes: [
+    {
+      path: "/health",
+      method: ["GET"],
+      handler: (_req, res) => {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ status: "ok", version: process.env.APP_VERSION ?? "dev" }));
+      },
+    },
+  ],
 });
 
 // message.im — a user's DM reply. Ignore edits/joins/bot echoes (any subtype) and

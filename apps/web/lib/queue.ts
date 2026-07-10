@@ -4,9 +4,13 @@ import type { SendDmJob } from "@poddaily/shared";
 
 const globalForQueue = globalThis as unknown as { _poddailyQueue?: Queue };
 
-function getQueue(): Queue {
+export function getQueue(): Queue {
+  // Cache in every mode: in dev the globalThis stash survives HMR; in production the
+  // standalone server is one long-lived process, and a fresh Queue per call would open
+  // a new Redis connection each time and never close it (the /api/health probe calls
+  // this on every poll).
   const q = globalForQueue._poddailyQueue ?? new Queue(QUEUE_NAME, { connection: { url: process.env.REDIS_URL } });
-  if (process.env.NODE_ENV !== "production") globalForQueue._poddailyQueue = q;
+  globalForQueue._poddailyQueue = q;
   return q;
 }
 

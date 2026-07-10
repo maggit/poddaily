@@ -22,10 +22,20 @@ describe("smoke:auth", () => {
 
   it("middleware authorization logic denies an unauthenticated request", async () => {
     const { authConfig } = await import("../auth.config");
-    const result = authConfig.callbacks!.authorized!({
-      auth: null,
-      request: new Request("http://localhost:3000/dashboard"),
-    } as never);
+    // The callback receives a NextRequest and reads request.nextUrl (public-landing check).
+    const request = Object.assign(new Request("http://localhost:3000/dashboard"), {
+      nextUrl: new URL("http://localhost:3000/dashboard"),
+    });
+    const result = authConfig.callbacks!.authorized!({ auth: null, request } as never);
     expect(result).toBe(false);
+  });
+
+  it("middleware authorization logic allows the public landing page", async () => {
+    const { authConfig } = await import("../auth.config");
+    const request = Object.assign(new Request("http://localhost:3000/"), {
+      nextUrl: new URL("http://localhost:3000/"),
+    });
+    const result = authConfig.callbacks!.authorized!({ auth: null, request } as never);
+    expect(result).toBe(true);
   });
 });

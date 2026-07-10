@@ -2,7 +2,7 @@
 
 > Self-hosted, Slack-native daily standup bot + admin platform. Open-source, no per-seat cost.
 
-**Website:** [poddaily.io](https://poddaily.io/) · **Installation guide:** [poddaily.io/install](https://poddaily.io/install)
+**Website:** [poddaily.io](https://poddaily.io/) · **Installation guide:** [poddaily.io/install](https://poddaily.io/install) · **Self-hosting:** [SELF_HOSTING.md](SELF_HOSTING.md)
 
 **Status:** Phase 1 (Core) is **feature-complete** — all 7 build steps land with automated
 smokes green in CI; the remaining gates are the live-workspace runbook walks. This README and
@@ -79,8 +79,10 @@ what's next and the [PRD](ContextDB/01_specs/poddaily-prd.md) for the full scope
 
 ### Self-hosting & operations
 
-- **Runs entirely on your infrastructure** — Docker services (`web`, `api`, `worker`,
-  Redis) with runbooks for Dokploy and Railway; Postgres via Supabase (cloud or CLI).
+- **Runs entirely on your infrastructure** — one published Docker image
+  (`ghcr.io/maggit/poddaily`, amd64 + arm64) runs all three processes (`web`, `api`,
+  `worker`); a batteries-included compose file bundles Postgres and Redis. See
+  **[SELF_HOSTING.md](SELF_HOSTING.md)**.
 - **No per-seat cost, your data stays yours.**
 - **Secure by default** — Slack request-signature verification, AES-GCM-encrypted user
   tokens at rest, all secrets via environment variables.
@@ -331,10 +333,15 @@ See [Testing & Local Dev](ContextDB/02_architecture/testing-and-local-dev.md).
 
 ## Deployment
 
-Hosted on **Dokploy** (self-hosted, Docker + Traefik) with a **Supabase cloud** Postgres. Each
-app is a Docker service: `web` via `Dockerfile.web`, `api` via `Dockerfile.api`, and `worker`
-via `Dockerfile.worker` (both run via `tsx`), with Redis as a compose service — all activated
-in `docker-compose.dokploy.yml`. The `api` is mapped to a domain so Slack can reach its
+**Self-hosters:** pull the published image and follow **[SELF_HOSTING.md](SELF_HOSTING.md)**
+— `deploy/docker-compose.yml` runs the whole stack (web, api, worker, Postgres, Redis) from
+`ghcr.io/maggit/poddaily`, with migrations applied automatically on container start. Releases
+are semver git tags (`vX.Y.Z`) published by `.github/workflows/release.yml`.
+
+The reference deployment (poddaily.io) runs on **Dokploy** (self-hosted, Docker + Traefik)
+with a **Supabase cloud** Postgres, building from source via the unified `Dockerfile` and
+`docker-compose.dokploy.yml`: all three processes are the same image with different commands
+(`web` / `api` / `worker`), plus Redis. The `api` is mapped to a domain so Slack can reach its
 `/slack/events` request URL; the `worker` has no domain. Full step-by-step:
 **[Dokploy + Supabase runbook](ContextDB/02_architecture/deployment-dokploy.md)** (Railway is a
 documented alternative — same image — in the [Railway runbook](ContextDB/02_architecture/deployment-railway.md)).

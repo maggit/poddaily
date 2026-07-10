@@ -8,3 +8,15 @@
 **/dist
 **/.turbo
 **/*.log
+
+# Non-build content — keeps the context small and avoids cache busts on doc edits.
+.github
+.claude
+.remember
+.superpowers
+ContextDB
+docs
+supabase
+deploy
+*.md
+docker-compose*.yml

@@ -1,41 +1,64 @@
-# Production stack for Dokploy (Docker Compose deployment).
+# Production stack for Dokploy (Docker Compose deployment), building from source.
+# Self-hosters pulling published GHCR images should use deploy/docker-compose.yml instead.
 # Local dev uses the separate root docker-compose.yml (Redis only) + the Supabase CLI.
 # Postgres is external (Supabase) — not a service here.
 # Set env vars (DATABASE_URL, AUTH_SECRET, NEXTAUTH_URL, SLACK_*, INTERNAL_API_SECRET) in
 # Dokploy's environment panel; they're interpolated below.
 #
-# Services: web (Next.js), api (Bolt inbound DM), worker (BullMQ scheduler + outbound DM),
-# and redis (BullMQ broker). Postgres remains external (Supabase).
+# All three services build the same unified image (see Dockerfile); the container
+# command picks the role. Migrations run on every container start, serialized by a
+# Postgres advisory lock.
 
 services:
   web:
     build:
       context: .
-      dockerfile: Dockerfile.web
+      dockerfile: Dockerfile
+    command: ["web"]
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
+      REDIS_URL: redis://redis:6379
       AUTH_SECRET: ${AUTH_SECRET}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
       SLACK_CLIENT_ID: ${SLACK_CLIENT_ID}
       SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
-    # Container listens on 0.0.0.0:3000 (HOSTNAME + PORT baked into the image).
-    # In Dokploy, map your domain to this service on port 3000.
+    # Container listens on 0.0.0.0:3000. In Dokploy, map your domain to this service
+    # on port 3000.
     expose:
       - "3000"
+    depends_on: [redis]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   redis:
     image: redis:7-alpine
+    # AOF persistence so queued/delayed standup jobs survive a Redis restart.
+    command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # Slack events receiver — map the Slack app's request URL domain to this service on
+  # port 3001 (POST /slack/events).
   api:
     build:
       context: .
-      dockerfile: Dockerfile.api
+      dockerfile: Dockerfile
+    command: ["api"]
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
       REDIS_URL: redis://redis:6379
       # Base URL of the web app — used to build the "Connect to post as yourself" link
       # on bot-posted reports (apps/api/src/handleMessage.ts). Omit it and the link is skipped.
@@ -48,13 +71,21 @@ services:
     expose:
       - "3001"
     depends_on: [redis]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:3001/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   worker:
     build:
       context: .
-      dockerfile: Dockerfile.worker
+      dockerfile: Dockerfile
+    command: ["worker"]
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
       REDIS_URL: redis://redis:6379
       # Base URL of the web app — enables the daily "Connect to post as yourself" nudge in the
       # standup DM for unconnected members (apps/worker/src/sendDm.ts). Omit it and the nudge is skipped.
@@ -62,6 +93,12 @@ services:
       SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
     depends_on: [redis]
+    healthcheck:
+      test: ["CMD-SHELL", "node dist/healthcheck.mjs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 volumes:
   redisdata:

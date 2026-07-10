@@ -3,6 +3,11 @@
 How to deploy poddaily to **Railway** with a **Supabase cloud** database, from zero. Decision:
 [Railway + Supabase ADR](../03_decisions/2026-06-17-railway-supabase-deployment.md).
 
+> **Update 2026-07-08:** the per-service Dockerfiles this runbook references were replaced by
+> one unified root `Dockerfile` (container command picks `web`/`api`/`worker`), and published
+> images are available at `ghcr.io/maggit/poddaily` — on Railway you can deploy from the image
+> instead of building. See [deployment-docker-image.md](deployment-docker-image.md).
+
 > **Status:** the **web app is deployable now** (`Dockerfile.web`, verified). `apps/api`,
 > `apps/worker`, and Railway **Redis** arrive in build-step 5 — the first full go-live is then.
 > Sections below marked **(Step 5)** aren't needed yet.

@@ -5,12 +5,18 @@ cloud** database. This is the chosen host — see the
 [switch-to-Dokploy ADR](../03_decisions/2026-06-17-switch-to-dokploy.md). (Railway remains a
 viable alternative — [Railway runbook](deployment-railway.md) — the Docker image is identical.)
 
-> **Status:** the **full stack is deployable** as of Step 5b. `web` (`Dockerfile.web`), `api`
-> (`Dockerfile.api`), `worker` (`Dockerfile.worker`), and **Redis** are all defined in
-> `docker-compose.dokploy.yml`. Deploy the whole stack via the **Compose** path (Part B,
-> Option 2) so `api`/`worker` share a Docker network with `redis` (a standalone Application
-> can't resolve `redis://redis:6379`). Sections still marked **(Step 5)** below are historical
-> notes from when only `web` was live.
+> **Update 2026-07-08:** the three per-service Dockerfiles were replaced by **one unified
+> root `Dockerfile`** — same image, the container command picks the role (`web`/`api`/`worker`)
+> — and releases are now published to `ghcr.io/maggit/poddaily`. Where this runbook says
+> `Dockerfile.web`/`Dockerfile.api`/`Dockerfile.worker`, read the unified `Dockerfile` +
+> `command`. See [deployment-docker-image.md](deployment-docker-image.md) and
+> [`SELF_HOSTING.md`](../../SELF_HOSTING.md).
+
+> **Status:** the **full stack is deployable** as of Step 5b. `web`, `api`, `worker`, and
+> **Redis** are all defined in `docker-compose.dokploy.yml`. Deploy the whole stack via the
+> **Compose** path (Part B, Option 2) so `api`/`worker` share a Docker network with `redis`
+> (a standalone Application can't resolve `redis://redis:6379`). Sections still marked
+> **(Step 5)** below are historical notes from when only `web` was live.
 
 ## Why Dokploy works cleanly here
 
