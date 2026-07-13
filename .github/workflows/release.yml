@@ -48,12 +48,15 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Provides OCI labels (org.opencontainers.image.source et al. — they link the GHCR
-      # package to this repo) and the version for APP_VERSION.
+      # package to this repo) and the version for APP_VERSION. The semver pattern makes
+      # `version` the bare "X.Y.Z" (not the raw "vX.Y.Z" ref) to match the merge job.
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
 
       - name: Build and push by digest
         id: build
