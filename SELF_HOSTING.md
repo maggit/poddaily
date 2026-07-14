@@ -76,6 +76,26 @@ The compose file is compatible with Dokploy's **Docker Compose** service type:
 4. Deploy. Migrations run on boot; watch the `web` service logs for
    `[migrate] schema up to date`.
 
+### Running as separate Application services instead
+
+You can also run web, api, and worker as three image-based **Application** services
+(image `ghcr.io/maggit/poddaily:<tag>`), with Redis/Postgres provided separately. One
+gotcha: Dokploy's **Run Command** field (Advanced section) replaces the container's
+*entire* command — **including the image's `ENTRYPOINT`** — unlike `command:` in a
+compose file, which only replaces the `CMD` role argument. Setting the run command to
+just `api` makes Docker exec a nonexistent `api` binary, and the container sticks in
+`created` with no logs. Use the full form:
+
+| Service | Run Command                       |
+|---------|-----------------------------------|
+| web     | *(leave empty — image default)*   |
+| api     | `/app/docker-entrypoint.sh api`   |
+| worker  | `/app/docker-entrypoint.sh worker`|
+
+Also make sure all three services share a Docker network with Redis and set `REDIS_URL`
+to a hostname that resolves on that network (`redis://redis:6379` only works inside a
+compose stack's own network).
+
 ## 4. Upgrading
 
 Releases are semver git tags; every release publishes `X.Y.Z`, `X.Y`, `X`, and `latest`
@@ -123,5 +143,11 @@ work, but only if Postgres is stopped (or you accept crash-consistent copies) �
   (`{"checks":{"database":…,"redis":…}}`) and 503 when anything is down.
 - A container that exits immediately at boot usually failed migrations — check its logs
   for `[migrate] failed:`; the restart policy retries once the database is reachable.
+- A container stuck in `created` (never running, **no logs at all**) never started:
+  either a `depends_on` health condition was never met (check `docker compose ps -a`
+  for an unhealthy `postgres`/`redis`) or the start itself was rejected — `docker
+  inspect --format '{{json .State}}' <container>` shows the reason. On Dokploy
+  Application services, the classic cause is a Run Command of just `api`/`worker`
+  (see above): the error is `exec: "api": executable file not found in $PATH`.
 - Slack shows "dispatch_failed" on events → Slack can't reach
   `https://<api-domain>/slack/events`; check the api domain mapping and signing secret.
