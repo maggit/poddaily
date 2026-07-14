@@ -83,9 +83,15 @@ function ThemeToggle({ dark, onToggle }: { dark: boolean; onToggle: () => void }
 export function LandingShell({
   nav,
   children,
+  official = false,
+  instanceName = null,
 }: {
   nav: Array<{ href: string; label: string }>;
   children: React.ReactNode;
+  /** Canonical poddaily.io deployment: maintainer credit on, instance banner off. */
+  official?: boolean;
+  /** Self-hosted deployment's display name (PODDAILY_INSTANCE_NAME), e.g. "Clara". */
+  instanceName?: string | null;
 }) {
   const [dark, setDark] = useState(true);
 
@@ -103,6 +109,8 @@ export function LandingShell({
     localStorage.setItem(THEME_KEY, next ? "dark" : "light");
   };
 
+  const signInLabel = instanceName ? `Sign in to ${instanceName}` : "Sign in";
+
   return (
     <div
       id="pd-landing"
@@ -115,6 +123,27 @@ export function LandingShell({
           __html: `(function(){try{var q=new URLSearchParams(location.search).get("theme");var t=q==="light"||q==="dark"?q:localStorage.getItem("${THEME_KEY}");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}var e=document.getElementById("pd-landing");if(e){e.classList.toggle("dark",t==="dark")}}catch(_){}})();`,
         }}
       />
+
+      {/* Self-hosted deployments get a sticky instance banner; the canonical
+          poddaily.io instance (official) is the marketing site and hides it. */}
+      {!official && (
+        <div className="sticky top-0 z-50 bg-accent text-accent-foreground">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-6 py-2 text-sm">
+            <p className="font-medium tracking-tight">
+              {instanceName ? (
+                <>
+                  You&apos;re on the <span className="font-bold">{instanceName}</span> poddaily instance
+                </>
+              ) : (
+                <>You&apos;re on a self-hosted poddaily instance</>
+              )}
+            </p>
+            <Link href="/team" className="whitespace-nowrap font-semibold underline underline-offset-2 transition-opacity hover:opacity-80">
+              {signInLabel} →
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className="landing-grain relative overflow-hidden">
         {/* turquoise glow */}
@@ -150,6 +179,14 @@ export function LandingShell({
                   </a>
                 )
               )}
+              {!official && (
+                <Link
+                  href="/team"
+                  className="px-2 text-sm font-medium text-accent transition-colors hover:text-accent-strong"
+                >
+                  {signInLabel}
+                </Link>
+              )}
               <ThemeToggle dark={dark} onToggle={toggle} />
             </nav>
           </header>
@@ -171,11 +208,13 @@ export function LandingShell({
                   MIT license
                 </a>
               </p>
-              <p>
-                Made with <span className="text-accent">♥</span> by Raquel Hernandez
-              </p>
+              {official && (
+                <p>
+                  Made with <span className="text-accent">♥</span> by Raquel Hernandez
+                </p>
+              )}
             </div>
-            <p>this deployment is a private instance for internal team use</p>
+            {!official && <p>this deployment is a private instance for internal team use</p>}
           </footer>
         </div>
       </div>

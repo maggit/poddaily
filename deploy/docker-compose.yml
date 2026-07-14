@@ -28,6 +28,8 @@ services:
       SLACK_CLIENT_ID: ${SLACK_CLIENT_ID}
       SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
+      # Optional display name shown in the landing page's instance banner + sign-in link.
+      PODDAILY_INSTANCE_NAME: ${PODDAILY_INSTANCE_NAME:-}
     ports:
       - "3000:3000"
     healthcheck:

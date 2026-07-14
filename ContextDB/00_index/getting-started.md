@@ -250,6 +250,8 @@ the opening message.
 | `NEXTAUTH_SECRET` | `openssl rand -base64 32` | any string | generated |
 | `NEXTAUTH_URL` | Your web base URL | `http://localhost:3000` | tunnel/prod URL |
 | `INTERNAL_API_SECRET` | You generate; worker↔api bearer + token-encryption key | any string | random secret |
+| `PODDAILY_INSTANCE_NAME` | Optional; deployment display name → landing banner + "Sign in to …" link | unset | e.g. `Clara` |
+| `PODDAILY_OFFICIAL_INSTANCE` | Maintainer-only; `true` on poddaily.io hides the instance banner and shows the footer credit | unset | unset (poddaily.io: `true`) |
 
 ---
 
