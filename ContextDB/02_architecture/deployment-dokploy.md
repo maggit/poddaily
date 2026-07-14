@@ -146,6 +146,14 @@ When `apps/api` + `apps/worker` land, the full stack runs from `docker-compose.d
   answer.
 - **Bot scopes for the DM Q&A:** `chat:write` + `im:write` (post / open DM) and **`im:history`**
   (receive replies). Adding a scope requires reinstalling the app → new `SLACK_BOT_TOKEN`.
+- **Dokploy's Run Command field replaces the ENTRYPOINT, not just the CMD.** (Learned
+  2026-07-14 standing up a second Dokploy instance.) For image-based Application services,
+  setting Run Command to just `api` or `worker` — which works as `command:` in a compose
+  file — makes swarm exec a nonexistent `api` binary; the container sticks in `created`
+  forever with **zero logs** (the rejection reason, `exec: "api": executable file not
+  found in $PATH`, is only visible via `docker inspect --format '{{json .State}}'` or the
+  Dokploy deployment log). Use the full command: `/app/docker-entrypoint.sh api` /
+  `/app/docker-entrypoint.sh worker`; leave web's empty (image default CMD is `web`).
 - **Standalone Application can't reach `redis://redis:6379`.** That hostname only resolves
   inside the Compose stack's network. Deploy via the **Compose** path (Part B Option 2) so
   api/worker share a network with `redis`; a per-service Application needs the Redis service's
