@@ -50,17 +50,17 @@ function Code({ children }: { children: React.ReactNode }) {
   return <code className="border border-border bg-secondary px-1.5 py-0.5 font-mono text-[12px] text-foreground">{children}</code>;
 }
 
-const ENV_VARS: Array<[name: string, services: string, purpose: string]> = [
-  ["DATABASE_URL", "web · api · worker", "Postgres connection (Supabase pooled, port 6543, or your own)"],
-  ["DIRECT_URL", "migrations", "Direct Postgres connection (port 5432) — used by drizzle migrations"],
-  ["REDIS_URL", "api · worker · web", "BullMQ broker (web uses it for same-day catch-up jobs)"],
-  ["SLACK_BOT_TOKEN", "api · worker · web", "Bot User OAuth Token (xoxb-…) from OAuth & Permissions"],
-  ["SLACK_SIGNING_SECRET", "api", "Verifies inbound Slack requests — Basic Information → App Credentials"],
-  ["SLACK_CLIENT_ID / SLACK_CLIENT_SECRET", "web · api", "OAuth app credentials — Basic Information → App Credentials"],
-  ["AUTH_SECRET / NEXTAUTH_SECRET", "web", "Session encryption — generate with: openssl rand -base64 32"],
-  ["NEXTAUTH_URL", "web · api · worker", "Public URL of the web app (also builds the connect links in DMs)"],
-  ["INTERNAL_API_SECRET", "web · api · worker", "Internal service auth + encryption key for stored user tokens"],
-  ["STANDUP_TIMEOUT_MS", "api · worker (same value!)", "Optional — inactivity timeout, default 14400000 (4 h)"],
+const ENV_VARS: Array<[name: string, required: string, purpose: string]> = [
+  ["POSTGRES_PASSWORD", "required", "Password for the bundled Postgres (the compose file bakes it into DATABASE_URL)"],
+  ["AUTH_SECRET", "required", "Session encryption — generate with: openssl rand -base64 32"],
+  ["NEXTAUTH_URL", "required", "Public URL of the web app (auth callbacks + the connect links in DMs)"],
+  ["INTERNAL_API_SECRET", "required", "Internal service auth + encryption key for stored user tokens — openssl rand -hex 32"],
+  ["SLACK_BOT_TOKEN", "required", "Bot User OAuth Token (xoxb-…) from OAuth & Permissions"],
+  ["SLACK_SIGNING_SECRET", "required", "Verifies inbound Slack requests — Basic Information → App Credentials"],
+  ["SLACK_CLIENT_ID / SLACK_CLIENT_SECRET", "required", "OAuth app credentials — Basic Information → App Credentials"],
+  ["PODDAILY_TAG", "optional", "Image tag to run: latest (default), a major like 1, or an exact 1.0.0"],
+  ["STANDUP_TIMEOUT_MS", "optional", "Inactivity timeout in ms, default 14400000 (4 h)"],
+  ["DIRECT_URL", "optional", "Only for an external transaction-pooled Postgres (e.g. Supabase, port 6543) — migrations need a direct session"],
 ];
 
 export function InstallGuide() {
@@ -78,9 +78,11 @@ export function InstallGuide() {
             From zero to your first standup.
           </h1>
           <p className="reveal mt-6 max-w-2xl text-[15px] leading-relaxed text-muted-foreground" style={{ animationDelay: "120ms" }}>
-            Everything poddaily needs: a Postgres database, Redis, the three app services, a Slack
-            app in your workspace, and (optionally) a Linear webhook. Budget ~30 minutes. If you
-            just want to poke around locally with a stubbed Slack, the{" "}
+            poddaily ships as one prebuilt Docker image —{" "}
+            <Code>ghcr.io/maggit/poddaily</Code> (amd64 + arm64) — and a compose file that bundles
+            Postgres and Redis. No cloning, no building: a Slack app, a <Code>.env</Code>, and{" "}
+            <Code>docker compose up</Code>. Budget ~20 minutes. If you just want to poke around
+            locally with a stubbed Slack, the{" "}
             <a href={`${GITHUB_URL}#quick-start`} className="text-accent underline underline-offset-2 hover:text-accent-strong">
               README quick start
             </a>{" "}
@@ -88,36 +90,31 @@ export function InstallGuide() {
           </p>
         </section>
 
-        <Step n="Step 01" title="Get the code">
+        <Step n="Step 01" title="Grab the compose file">
           <p>
-            You&apos;ll need <span className="text-foreground">Node 22+</span>,{" "}
-            <span className="text-foreground">pnpm 10</span> (<Code>corepack enable</Code>), and{" "}
-            <span className="text-foreground">Docker</span>.
+            You&apos;ll need <span className="text-foreground">Docker Engine 24+</span> with the
+            compose plugin, and <span className="text-foreground">two public HTTPS hostnames</span>{" "}
+            behind your reverse proxy — one for the admin UI, one for the endpoint Slack calls.
+            Postgres and Redis are part of the stack; there is nothing else to provision.
           </p>
           <Term
             title="terminal"
-            code={`git clone ${GITHUB_URL}.git
-cd poddaily && pnpm install`}
+            code={`mkdir poddaily && cd poddaily
+curl -fsSLO https://raw.githubusercontent.com/maggit/poddaily/main/deploy/docker-compose.yml
+curl -fsSL -o .env https://raw.githubusercontent.com/maggit/poddaily/main/deploy/.env.example`}
           />
-        </Step>
-
-        <Step n="Step 02" title="Provision the database">
           <p>
-            Any Postgres 16 works. With <span className="text-foreground">Supabase</span>: create a
-            project, then under <span className="text-foreground">Project Settings → Database</span>{" "}
-            grab both connection strings — the <span className="text-foreground">transaction pooler</span>{" "}
-            (port 6543) becomes <Code>DATABASE_URL</Code> and the{" "}
-            <span className="text-foreground">direct connection</span> (port 5432) becomes{" "}
-            <Code>DIRECT_URL</Code>. Then run the migrations:
+            Already have Postgres (e.g. Supabase)? Point <Code>DATABASE_URL</Code> in the compose
+            file at it, drop its <Code>postgres</Code> service, and set <Code>DIRECT_URL</Code> —
+            details in{" "}
+            <a href={`${GITHUB_URL}/blob/main/SELF_HOSTING.md`} className="text-accent underline underline-offset-2 hover:text-accent-strong">
+              SELF_HOSTING.md
+            </a>
+            .
           </p>
-          <Term
-            title="terminal"
-            code={`DIRECT_URL="postgresql://postgres:<pw>@db.<ref>.supabase.co:5432/postgres" \\
-  pnpm db:migrate`}
-          />
         </Step>
 
-        <Step n="Step 03" title="Create the Slack app">
+        <Step n="Step 02" title="Create the Slack app">
           <p>
             Go to <span className="text-foreground">api.slack.com/apps → Create New App → From an app manifest</span>,
             pick your workspace, and paste the repo&apos;s{" "}
@@ -125,7 +122,7 @@ cd poddaily && pnpm install`}
               app_manifest.yaml
             </a>{" "}
             — first replacing every <Code>poddaily.example.com</Code> with your real domains (see
-            Step 04). The manifest pre-configures all scopes: bot scopes like{" "}
+            Step 03). The manifest pre-configures all scopes: bot scopes like{" "}
             <Code>chat:write</Code>, <Code>chat:write.customize</Code>, <Code>im:write</Code>,{" "}
             <Code>im:history</Code>, <Code>users:read</Code>, <Code>users:read.email</Code>, and the{" "}
             <Code>chat:write</Code> <em>user</em> scope that lets members post as themselves.
@@ -139,7 +136,7 @@ cd poddaily && pnpm install`}
           </p>
         </Step>
 
-        <Step n="Step 04" title="Configure the callback URLs">
+        <Step n="Step 03" title="Configure the callback URLs">
           <p>
             poddaily runs two public services: the <span className="text-foreground">web</span> app
             (admin UI, e.g. <Code>https://poddaily.example.com</Code>) and the{" "}
@@ -173,17 +170,18 @@ cd poddaily && pnpm install`}
           </p>
         </Step>
 
-        <Step n="Step 05" title="Set the environment variables">
+        <Step n="Step 04" title="Fill in .env">
           <p>
-            Copy <Code>.env.example</Code> to <Code>.env.local</Code> (local) or set these in your
-            deploy platform&apos;s environment panel. Which service needs what:
+            Edit the <Code>.env</Code> you downloaded in Step 01 (or set the same keys in your
+            deploy platform&apos;s environment panel). The compose file wires each value to the
+            right services:
           </p>
           <div className="overflow-x-auto border border-border">
             <table className="w-full text-left text-[13px]">
               <thead>
                 <tr className="border-b border-border font-mono text-[10px] uppercase tracking-[0.15em] text-subtle-foreground">
                   <th className="px-4 py-2.5 font-medium">Variable</th>
-                  <th className="px-4 py-2.5 font-medium">Needed by</th>
+                  <th className="px-4 py-2.5 font-medium">Required</th>
                   <th className="px-4 py-2.5 font-medium">Purpose</th>
                 </tr>
               </thead>
@@ -204,27 +202,38 @@ cd poddaily && pnpm install`}
           </p>
         </Step>
 
-        <Step n="Step 06" title="Deploy the services">
+        <Step n="Step 05" title="Start the stack">
           <p>
-            The repo ships Dockerfiles for all three services plus a production compose file,{" "}
-            <Code>docker-compose.dokploy.yml</Code>: <span className="text-foreground">web</span>{" "}
-            (Next.js, port 3000), <span className="text-foreground">api</span> (Slack events, port
-            3001), <span className="text-foreground">worker</span> (scheduler + DMs, no domain), and{" "}
-            <span className="text-foreground">redis</span>. Map your web domain to{" "}
-            <Code>web:3000</Code> and your api domain to <Code>api:3001</Code>; Postgres stays
-            external. Step-by-step runbooks for{" "}
-            <a href={`${GITHUB_URL}/blob/main/ContextDB/02_architecture/deployment-dokploy.md`} className="text-accent underline underline-offset-2 hover:text-accent-strong">
-              Dokploy
-            </a>{" "}
-            and{" "}
-            <a href={`${GITHUB_URL}/blob/main/ContextDB/02_architecture/deployment-railway.md`} className="text-accent underline underline-offset-2 hover:text-accent-strong">
-              Railway
-            </a>{" "}
-            live in the repo.
+            One command pulls the published image and starts everything —{" "}
+            <span className="text-foreground">web</span> (admin UI, port 3000),{" "}
+            <span className="text-foreground">api</span> (Slack events, port 3001),{" "}
+            <span className="text-foreground">worker</span> (scheduler + DMs),{" "}
+            <span className="text-foreground">postgres</span>, and{" "}
+            <span className="text-foreground">redis</span>. Database migrations run automatically
+            on every start; there is no separate migration step, now or on upgrades.
+          </p>
+          <Term
+            title="terminal"
+            code={`docker compose up -d
+
+curl -s http://localhost:3000/api/health
+# {"status":"ok","version":"1.0.0","checks":{"database":"ok","redis":"ok"}}`}
+          />
+          <p>
+            Map your web domain to port <Code>3000</Code> and your api domain to port{" "}
+            <Code>3001</Code> in your reverse proxy. Upgrading later is{" "}
+            <Code>docker compose pull &amp;&amp; docker compose up -d</Code> — pin{" "}
+            <Code>PODDAILY_TAG=1</Code> to follow the v1 major. Deploying on{" "}
+            <span className="text-foreground">Dokploy</span>? The same compose file works as a
+            Compose service — steps in{" "}
+            <a href={`${GITHUB_URL}/blob/main/SELF_HOSTING.md`} className="text-accent underline underline-offset-2 hover:text-accent-strong">
+              SELF_HOSTING.md
+            </a>
+            .
           </p>
         </Step>
 
-        <Step n="Step 07" title="First sign-in & first standup">
+        <Step n="Step 06" title="First sign-in & first standup">
           <ul className="list-disc space-y-2 pl-5">
             <li>
               Open <Code>https://&lt;web-domain&gt;/team</Code> and sign in with Slack —{" "}
@@ -246,7 +255,7 @@ cd poddaily && pnpm install`}
           </ul>
         </Step>
 
-        <Step n="Step 08" title="Connect Linear (optional)">
+        <Step n="Step 07" title="Connect Linear (optional)">
           <p>
             The Linear integration surfaces each member&apos;s closed issues alongside their
             check-ins in the reports dashboard. People are matched by email — the Linear

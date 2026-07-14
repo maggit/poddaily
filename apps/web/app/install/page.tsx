@@ -4,7 +4,7 @@ import { InstallGuide } from "@/components/install-guide";
 export const metadata: Metadata = {
   title: "Installation guide",
   description:
-    "Install poddaily on your own infrastructure: provision Postgres and Redis, create the Slack app, configure callback URLs and environment variables, deploy the services, and connect Linear.",
+    "Install poddaily on your own infrastructure from the published Docker image: grab the compose file, create the Slack app, fill in .env, and docker compose up — migrations run automatically.",
 };
 
 export default function InstallPage() {
