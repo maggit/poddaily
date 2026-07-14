@@ -59,13 +59,22 @@ const ENV_VARS: Array<[name: string, required: string, purpose: string]> = [
   ["SLACK_SIGNING_SECRET", "required", "Verifies inbound Slack requests — Basic Information → App Credentials"],
   ["SLACK_CLIENT_ID / SLACK_CLIENT_SECRET", "required", "OAuth app credentials — Basic Information → App Credentials"],
   ["PODDAILY_TAG", "optional", "Image tag to run: latest (default), a major like 1, or an exact 1.0.0"],
+  ["PODDAILY_INSTANCE_NAME", "optional", "Your company/instance name — shown in the landing page's instance banner and “Sign in to …” link"],
   ["STANDUP_TIMEOUT_MS", "optional", "Inactivity timeout in ms, default 14400000 (4 h)"],
   ["DIRECT_URL", "optional", "Only for an external transaction-pooled Postgres (e.g. Supabase, port 6543) — migrations need a direct session"],
 ];
 
-export function InstallGuide() {
+export function InstallGuide({
+  official = false,
+  instanceName = null,
+}: {
+  official?: boolean;
+  instanceName?: string | null;
+}) {
   return (
     <LandingShell
+      official={official}
+      instanceName={instanceName}
       nav={[
         { href: "/", label: "Home" },
         { href: GITHUB_URL, label: "GitHub" },

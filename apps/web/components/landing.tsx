@@ -70,9 +70,17 @@ const MOCK_CHECKINS = [
   },
 ];
 
-export function Landing() {
+export function Landing({
+  official = false,
+  instanceName = null,
+}: {
+  official?: boolean;
+  instanceName?: string | null;
+}) {
   return (
     <LandingShell
+      official={official}
+      instanceName={instanceName}
       nav={[
         { href: "#quick-start", label: "Quick start" },
         { href: "/install", label: "Install" },

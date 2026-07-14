@@ -25,6 +25,10 @@ services:
       SLACK_CLIENT_ID: ${SLACK_CLIENT_ID}
       SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
+      # Landing-page identity: official flag (canonical poddaily.io only) and optional
+      # self-hosted instance display name.
+      PODDAILY_OFFICIAL_INSTANCE: ${PODDAILY_OFFICIAL_INSTANCE:-}
+      PODDAILY_INSTANCE_NAME: ${PODDAILY_INSTANCE_NAME:-}
     # Container listens on 0.0.0.0:3000. In Dokploy, map your domain to this service
     # on port 3000.
     expose:

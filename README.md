@@ -308,6 +308,15 @@ variable, where it comes from, and its local-vs-live value are documented in the
 > on those services the standup still runs and unconnected members' updates still post (as the bot,
 > with their name) — the connect prompts are just silently skipped.
 
+**Landing-page identity (web only, both optional):** `PODDAILY_INSTANCE_NAME` sets a display
+name for your deployment — the landing page shows a sticky turquoise banner ("You're on the
+Clara poddaily instance") with a "Sign in to Clara" link to `/team`, plus the same link in the
+header nav. Unset, the banner reads "You're on a self-hosted poddaily instance" with a plain
+"Sign in" link. `PODDAILY_OFFICIAL_INSTANCE=true` is for the canonical poddaily.io deployment
+only: it hides the instance banner and sign-in links (poddaily.io is the marketing site, not a
+team instance) and shows the maintainer credit in the footer instead. Self-hosters should leave
+it unset (default `false`).
+
 `STANDUP_TIMEOUT_MS` (default `14400000` = 4h) is the per-report **inactivity** timeout: the
 clock resets every time a member replies, so a report is only marked `timed_out` (and not
 broadcast) after this long with **no reply** — not a fixed deadline from when the DM was sent.

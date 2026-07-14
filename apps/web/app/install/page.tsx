@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import { InstallGuide } from "@/components/install-guide";
+import { getInstanceConfig } from "@/lib/instance";
+
+// Render at request time so PODDAILY_OFFICIAL_INSTANCE / PODDAILY_INSTANCE_NAME are
+// read from the running container's env, not baked in at image build.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Installation guide",
@@ -8,5 +13,6 @@ export const metadata: Metadata = {
 };
 
 export default function InstallPage() {
-  return <InstallGuide />;
+  const { official, instanceName } = getInstanceConfig();
+  return <InstallGuide official={official} instanceName={instanceName} />;
 }
