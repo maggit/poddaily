@@ -20,6 +20,7 @@ export interface RecordedUpdate {
   channel: string;
   ts: string;
   text: string;
+  blocks?: string; // raw JSON string as Slack receives it (form-encoded)
 }
 
 const STUB_USER = {
@@ -116,8 +117,16 @@ export function startSlackStub(port = 4010): Promise<SlackStub> {
         channel: body.get("channel") ?? "",
         ts: body.get("ts") ?? "",
         text: body.get("text") ?? "",
+        blocks: body.get("blocks") ?? undefined,
       });
       return json(200, { ok: true, ts: body.get("ts") ?? "" });
+    }
+    // Deterministic permalink so tests can assert exact stored values.
+    if (u.pathname === "/api/chat.getPermalink") {
+      const body = await readBody(req);
+      const channel = body.get("channel") ?? u.searchParams.get("channel") ?? "";
+      const ts = body.get("message_ts") ?? u.searchParams.get("message_ts") ?? "";
+      return json(200, { ok: true, permalink: `https://stub.slack.local/archives/${channel}/p${ts.replace(".", "")}` });
     }
 
     // Paginated workspace directory — two fixed pages, so cursor-draining is exercised.

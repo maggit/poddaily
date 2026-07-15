@@ -62,6 +62,10 @@ export const standupReports = pgTable("standup_reports", {
   status: text("status").default("in_progress"),
   dmThreadTs: text("dm_thread_ts"),
   channelPostTs: text("channel_post_ts"),
+  // How the channel broadcast went out: "user" (member's own token) or "bot"
+  // (degraded post with name/avatar override + connect nudge). Null = not broadcast.
+  postedAs: text("posted_as"),
+  channelPermalink: text("channel_permalink"),
   reportedAt: timestamp("reported_at", { withTimezone: true }).defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   timeoutAt: timestamp("timeout_at", { withTimezone: true }),

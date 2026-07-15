@@ -30,6 +30,8 @@ export interface SlackClient {
   postMessage(channel: string, text: string, opts?: PostMessageOptions): Promise<string>;
   /** Edit an existing message (chat.update). */
   updateMessage(channel: string, ts: string, opts: { text: string; blocks?: unknown[] }): Promise<void>;
+  /** Resolve a message's shareable URL (chat.getPermalink); null on failure. */
+  getPermalink(channel: string, ts: string): Promise<string | null>;
   /** Fetch a user's Slack profile (users.info). Needs the bot `users:read` scope. */
   getUserProfile(slackUserId: string): Promise<{ image: string | null; tz: string | null; realName: string | null }>;
   /**
@@ -112,6 +114,15 @@ export function createSlackClient(opts: SlackClientOptions = {}): SlackClient {
         text: opts.text,
         ...(opts.blocks ? { blocks: opts.blocks as never } : {}),
       });
+    },
+    async getPermalink(channel, ts) {
+      try {
+        const res = await web.chat.getPermalink({ channel, message_ts: ts });
+        return res.permalink ?? null;
+      } catch {
+        // Best-effort: a missing permalink must never fail the caller's flow.
+        return null;
+      }
     },
     async getUserProfile(slackUserId) {
       const res = await web.users.info({ user: slackUserId });

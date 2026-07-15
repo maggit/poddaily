@@ -45,6 +45,9 @@ export interface ReportCard {
   answers: { question: string; answer: string }[];
   reportedAt: Date | null;
   linearIssues: LinearIssueRef[];
+  /** Slack link to the broadcast message + how it went out ("user" | "bot"); null pre-broadcast. */
+  slackPermalink: string | null;
+  postedAs: "user" | "bot" | null;
 }
 export interface RunDetail {
   team: { id: string; name: string; slackChannelName: string };
@@ -82,7 +85,7 @@ export async function getRunDetail(teamId: string, date?: string): Promise<RunDe
   const cards: ReportCard[] = await Promise.all(members.map(async (m) => {
     const rep = byUser.get(m.slackUserId);
     if (!rep) {
-      return { slackUserId: m.slackUserId, displayName: m.slackDisplayName, avatarUrl: m.slackAvatarUrl, status: "absent", answers: [], reportedAt: null, linearIssues: [] };
+      return { slackUserId: m.slackUserId, displayName: m.slackDisplayName, avatarUrl: m.slackAvatarUrl, status: "absent", answers: [], reportedAt: null, linearIssues: [], slackPermalink: null, postedAs: null };
     }
     let answers: { question: string; answer: string }[] = [];
     let linearIssues: LinearIssueRef[] = [];
@@ -98,6 +101,7 @@ export async function getRunDetail(teamId: string, date?: string): Promise<RunDe
     return {
       slackUserId: m.slackUserId, displayName: m.slackDisplayName, avatarUrl: m.slackAvatarUrl,
       status: (rep.status ?? "in_progress") as ReportCard["status"], answers, reportedAt: rep.reportedAt, linearIssues,
+      slackPermalink: rep.channelPermalink, postedAs: rep.postedAs as ReportCard["postedAs"],
     };
   }));
 

@@ -16,6 +16,7 @@ function fakeSlack() {
     async openDm() { return DM; },
     async postMessage(channel: string, text: string) { posts.push({ channel, text }); return "ts1"; },
     async updateMessage() {},
+    async getPermalink(channel: string, ts: string) { return `https://fake.slack.local/archives/${channel}/p${ts}`; },
     async getUserProfile() { return { image: null, tz: null, realName: null }; },
     async listAllUsers() { return []; },
   };
@@ -97,6 +98,7 @@ describe("handleMessage", () => {
       openDm: async () => "D",
       postMessage: async (channel: string, text: string, opts: any = {}) => { posts.push({ channel, text, opts }); return "post_ts_1"; },
       updateMessage: async (channel: string, ts: string, o: any) => { updates.push({ channel, ts, text: o.text }); },
+      getPermalink: async (channel: string, ts: string) => `https://fake.slack.local/archives/${channel}/p${ts}`,
       getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [],
     };
 
@@ -158,8 +160,8 @@ describe("handleMessage", () => {
     await sql`insert into standup_reports (run_id, slack_user_id, slack_display_name, answers, status, reported_at, created_at) values ((select id from standup_runs where scheduled_date='2026-06-20' and standup_id=(select standup_id from standup_runs where id=${runId}) limit 1), ${USER}, 'HM Tester', ${JSON.stringify([])}, 'completed', '2026-06-20T10:00:00Z', '2026-06-20T10:00:00Z')`;
 
     const posts: Array<{ opts: any }> = [];
-    const slack = { openDm: async () => "D", postMessage: async (_c: string, _t: string, opts: any = {}) => { posts.push({ opts }); return "ts"; }, updateMessage: async () => {}, getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [] };
-    const makeUserSlackLocal = () => ({ openDm: async () => "D", postMessage: async () => "ts", updateMessage: async () => {}, getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [] });
+    const slack = { openDm: async () => "D", postMessage: async (_c: string, _t: string, opts: any = {}) => { posts.push({ opts }); return "ts"; }, updateMessage: async () => {}, getPermalink: async () => null, getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [] };
+    const makeUserSlackLocal = () => ({ openDm: async () => "D", postMessage: async () => "ts", updateMessage: async () => {}, getPermalink: async () => null, getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [] });
 
     await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger: noEnq, makeUserSlack: makeUserSlackLocal }, { slackUserId: USER, channel: DM, text: "a1" });
     await handleMessage({ db, slack, secret: SECRET, enqueueRetrigger: noEnq, makeUserSlack: makeUserSlackLocal }, { slackUserId: USER, channel: DM, text: "a2" });
@@ -226,12 +228,14 @@ describe("handleMessage", () => {
       openDm: async () => "D",
       postMessage: async (channel: string, _t: string, opts: any = {}) => { botPosts.push({ channel, opts }); return "bot_ts"; },
       updateMessage: async () => {},
+      getPermalink: async (channel: string, ts: string) => `https://fake.slack.local/archives/${channel}/p${ts}`,
       getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [],
     };
     const makeUserSlackConnected = (token: string) => ({
       openDm: async () => "D",
       postMessage: async (channel: string, _t: string, opts: any = {}) => { userPosts.push({ token, channel, opts }); return "user_ts"; },
       updateMessage: async () => {},
+      getPermalink: async () => null,
       getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [],
     });
 
@@ -242,8 +246,13 @@ describe("handleMessage", () => {
     expect(userPosts[0].token).toBe("xoxp-user-1");
     expect(userPosts[0].opts.threadTs).toBeUndefined(); // posted to the channel, not threaded
     expect(userPosts[0].opts.username).toBeUndefined(); // true authorship — no override
-    const [r] = await sql`select channel_post_ts from standup_reports where slack_user_id = ${USER}`;
+    const [r] = await sql`select channel_post_ts, posted_as, channel_permalink from standup_reports where slack_user_id = ${USER}`;
     expect(r.channel_post_ts).toBe("user_ts");
+    expect(r.posted_as).toBe("user");
+    // permalink resolved via the BOT client (works for user posts too — same channel)
+    expect(r.channel_permalink).toBe(`https://fake.slack.local/archives/${CHAN}/puser_ts`);
+    // connected members get no outro connect nudge
+    expect(botPosts.some((p) => JSON.stringify(p.opts?.blocks ?? []).includes("/api/slack/install"))).toBe(false);
 
     await sql`delete from slack_user_tokens where slack_user_id = ${USER}`;
     await sql`update standup_runs set channel_opening_ts = null where id = ${runId}`;
@@ -260,6 +269,7 @@ describe("handleMessage", () => {
       openDm: async () => "D",
       postMessage: async (_c: string, _t: string, opts: any = {}) => { botPosts.push({ opts }); return "bot_ts"; },
       updateMessage: async () => {},
+      getPermalink: async (channel: string, ts: string) => `https://fake.slack.local/archives/${channel}/p${ts}`,
       getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [],
     };
     const makeUserSlackThrows = () => { throw new Error("should not be called when unconnected"); };
@@ -272,6 +282,17 @@ describe("handleMessage", () => {
     expect(reply!.opts.threadTs).toBeUndefined(); // posted to the channel, not threaded
     expect(reply!.opts.username).toBeTruthy(); // bot chat:write.customize attribution (the member name)
     expect(JSON.stringify(reply!.opts.blocks)).toContain("/api/slack/install"); // nudge present
+
+    const [r] = await sql`select channel_post_ts, posted_as, channel_permalink from standup_reports where slack_user_id = ${USER}`;
+    expect(r.channel_post_ts).toBe("bot_ts");
+    expect(r.posted_as).toBe("bot");
+    expect(r.channel_permalink).toContain("/archives/"); // permalink persisted for the web app
+
+    // The outro is followed by a one-time connect nudge in the DM (button block),
+    // since this report just went out as the bot.
+    const nudge = botPosts.find((p) => JSON.stringify(p.opts?.blocks ?? []).includes('"type":"actions"'));
+    expect(nudge).toBeTruthy();
+    expect(JSON.stringify(nudge!.opts.blocks)).toContain("/api/slack/install");
 
     if (prevNextAuthUrl === undefined) delete process.env.NEXTAUTH_URL;
     else process.env.NEXTAUTH_URL = prevNextAuthUrl;
@@ -289,6 +310,7 @@ describe("handleMessage", () => {
       openDm: async () => "D",
       postMessage: async (_c: string, _t: string, opts: any = {}) => { botPosts.push({ opts }); return "bot_ts"; },
       updateMessage: async () => {},
+      getPermalink: async () => null,
       getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [],
     };
     // user client throws (simulating invalid_auth/token_revoked)
@@ -296,6 +318,7 @@ describe("handleMessage", () => {
       openDm: async () => "D",
       postMessage: async () => { throw new Error("invalid_auth"); },
       updateMessage: async () => {},
+      getPermalink: async () => null,
       getUserProfile: async () => ({ image: null, tz: null, realName: null }), listAllUsers: async () => [],
     });
 
@@ -308,6 +331,8 @@ describe("handleMessage", () => {
     expect(reply!.opts.threadTs).toBeUndefined(); // posted to the channel, not threaded
     expect(reply!.opts.username).toBeTruthy(); // chat:write.customize attribution
     expect(JSON.stringify(reply!.opts.blocks)).toContain("/api/slack/install"); // nudge present
+    const [revoked] = await sql`select posted_as from standup_reports where slack_user_id = ${USER}`;
+    expect(revoked.posted_as).toBe("bot"); // user-token post failed → recorded as degraded
     const [r] = await sql`select channel_post_ts from standup_reports where slack_user_id = ${USER}`;
     expect(r.channel_post_ts).toBe("bot_ts");
 

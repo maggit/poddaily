@@ -62,3 +62,35 @@ export function buildReportBlocks(args: {
 
   return { text: textLines.join("\n"), blocks };
 }
+
+/**
+ * Context footer appended to a BOT-posted (degraded) report: the member hasn't connected,
+ * so nudge them. Shared so the web connect callback can rebuild the exact same message when
+ * swapping this footer for the connected note (chat.update requires the full block list).
+ */
+export function buildUnconnectedFooter(displayName: string, webUrl: string): unknown {
+  return {
+    type: "context",
+    elements: [{ type: "mrkdwn", text: `_${displayName} hasn't connected — <${webUrl}/api/slack/install|Connect to post as yourself>_` }],
+  };
+}
+
+/** Context footer that replaces the nudge after the member connects. */
+export function buildConnectedFooter(displayName: string): unknown {
+  return {
+    type: "context",
+    elements: [{ type: "mrkdwn", text: `_✅ ${displayName} connected — future standups post as them_` }],
+  };
+}
+
+/** The connect-nudge DM (button → /api/slack/install), sent to unconnected members at
+ *  standup start and again after the outro when their report went out as the bot. */
+export function buildConnectNudgeMessage(webUrl: string): BuiltMessage {
+  return {
+    text: "Want your standups to post as you in the channel? Connect once.",
+    blocks: [
+      { type: "section", text: { type: "mrkdwn", text: "Want your standups to post as *you* in the channel? Connect once:" } },
+      { type: "actions", elements: [{ type: "button", text: { type: "plain_text", text: "Connect to post as yourself" }, url: `${webUrl}/api/slack/install` }] },
+    ],
+  };
+}
