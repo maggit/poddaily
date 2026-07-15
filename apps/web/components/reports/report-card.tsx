@@ -1,4 +1,4 @@
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ExternalLink } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { StatusPill } from "@/components/ui/status-pill";
 import type { ReportCard as ReportCardData } from "@/lib/reports";
@@ -22,7 +22,23 @@ export function ReportCard({ card }: { card: ReportCardData }) {
         <div className="flex-1">
           <div className="font-medium text-foreground">{card.displayName}</div>
           {card.status === "completed" && card.reportedAt ? (
-            <div className="text-xs text-subtle-foreground">{new Date(card.reportedAt).toLocaleString()}</div>
+            <div className="flex items-center gap-1.5 text-xs text-subtle-foreground">
+              <span>{new Date(card.reportedAt).toLocaleString()}</span>
+              {card.postedAs ? (
+                <span>· posted {card.postedAs === "user" ? "as themselves" : "by the bot"}</span>
+              ) : null}
+              {card.slackPermalink ? (
+                <a
+                  href={card.slackPermalink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-0.5 text-accent transition-colors hover:text-accent-strong"
+                >
+                  View in Slack
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              ) : null}
+            </div>
           ) : null}
         </div>
         <StatusPill tone={s.tone}>{s.label}</StatusPill>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyState } from "../../../../../lib/oauth-state";
+import { refreshLatestBotReport } from "../../../../../lib/connect-cleanup";
 import { createDb, saveUserToken } from "@poddaily/db";
 import { createSlackClient } from "@poddaily/slack-client";
 
@@ -53,6 +54,14 @@ export async function GET(req: Request): Promise<NextResponse> {
     await slack.postMessage(dm, "✅ You're connected! Your standup reports will now post to the channel as you.");
   } catch (err) {
     console.warn(`[connect] confirmation DM failed for ${data.authed_user.id}:`, (err as Error).message);
+  }
+
+  // Best-effort: swap the stale "hasn't connected" footer on their most recent bot-posted
+  // channel report for a connected note, so the old nudge doesn't read as a failure.
+  try {
+    await refreshLatestBotReport(db, createSlackClient(), data.authed_user.id);
+  } catch (err) {
+    console.warn(`[connect] report footer refresh failed for ${data.authed_user.id}:`, (err as Error).message);
   }
 
   return page("Connected ✅", "poddaily will now post your standups as you. You can close this tab.", 200);

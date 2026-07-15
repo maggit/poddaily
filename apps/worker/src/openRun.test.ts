@@ -13,6 +13,7 @@ function fakeSlack() {
     openDm: async () => "D_FAKE",
     postMessage: async (channel: string, text: string) => { posts.push({ channel, text }); return "ts_open"; },
     updateMessage: async () => {},
+    getPermalink: async () => null,
     getUserProfile: async () => ({ image: null, tz: null, realName: null }),
     listAllUsers: async () => [],
   };

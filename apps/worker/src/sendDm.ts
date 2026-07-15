@@ -1,5 +1,5 @@
 import { schema, eq, and, desc, hasUserToken } from "@poddaily/db";
-import { interpolateLastReportDate } from "@poddaily/shared";
+import { buildConnectNudgeMessage, interpolateLastReportDate } from "@poddaily/shared";
 import type { SendDmDeps, SendDmJob } from "./types";
 
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
@@ -48,16 +48,8 @@ export async function sendDm(deps: SendDmDeps, job: SendDmJob): Promise<void> {
   // Existence check only — the worker never decrypts tokens.
   const webUrl = process.env.NEXTAUTH_URL;
   if (webUrl && !(await hasUserToken(db, slackUserId))) {
-    await slack.postMessage(
-      channelId,
-      "Want your standups to post as you in the channel? Connect once.",
-      {
-        blocks: [
-          { type: "section", text: { type: "mrkdwn", text: "Want your standups to post as *you* in the channel? Connect once:" } },
-          { type: "actions", elements: [{ type: "button", text: { type: "plain_text", text: "Connect to post as yourself" }, url: `${webUrl}/api/slack/install` }] },
-        ],
-      },
-    );
+    const nudge = buildConnectNudgeMessage(webUrl);
+    await slack.postMessage(channelId, nudge.text, { blocks: nudge.blocks });
   }
 
   // Per-report 4h timeout (Step 7). Read at call time so tests can override. The delay

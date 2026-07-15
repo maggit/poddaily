@@ -93,6 +93,11 @@ describe("slack web api stub", () => {
     expect(updates[0]).toMatchObject({ channel: "C1", ts: "999.0", text: "Reported: 1 out of 1" });
   });
 
+  it("returns a deterministic permalink from chat.getPermalink", async () => {
+    const res = await (await postForm(`${stub.url}/api/chat.getPermalink`, { channel: "C9", message_ts: "1234.5678" })).json();
+    expect(res).toMatchObject({ ok: true, permalink: "https://stub.slack.local/archives/C9/p12345678" });
+  });
+
   it("fakes oauth.v2.access and records the Bearer token on postMessage", async () => {
     await postForm(`${stub.url}/__stub/reset`, {});
     const access = await (await fetch(`${stub.url}/api/oauth.v2.access`, { method: "POST" })).json();
