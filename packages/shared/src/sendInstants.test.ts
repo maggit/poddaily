@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeSendInstant, anchorDate, isActiveWeekday, deriveTickCron } from "./sendInstants";
+import { computeSendInstant, anchorDate, isActiveWeekday, deriveTickCron, nextRunInstant } from "./sendInstants";
 import { cronFromWeekly } from "./schedule";
 
 // "9:00 on Mon-Fri" in cron terms
@@ -69,6 +69,34 @@ describe("computeSendInstant", () => {
     // January: New York is UTC-5 → 09:00 EST = 14:00Z
     const instant = computeSendInstant(CRON, "America/New_York", "2026-01-14");
     expect(instant.toISOString()).toBe("2026-01-14T14:00:00.000Z");
+  });
+});
+
+describe("nextRunInstant", () => {
+  it("returns today's slot when the time hasn't passed yet", () => {
+    // Wed 2026-06-17 06:00Z, UTC schedule at 09:00 → today 09:00Z
+    const next = nextRunInstant(CRON, "UTC", new Date("2026-06-17T06:00:00Z"));
+    expect(next?.toISOString()).toBe("2026-06-17T09:00:00.000Z");
+  });
+  it("rolls to the next active weekday once today's slot has passed", () => {
+    // Wed 2026-06-17 10:00Z, after the 09:00 slot → Thu 09:00Z
+    const next = nextRunInstant(CRON, "UTC", new Date("2026-06-17T10:00:00Z"));
+    expect(next?.toISOString()).toBe("2026-06-18T09:00:00.000Z");
+  });
+  it("skips the weekend for a Mon-Fri schedule", () => {
+    // Fri 2026-06-19 10:00Z, after the slot → Mon 2026-06-22 09:00Z
+    const next = nextRunInstant(CRON, "UTC", new Date("2026-06-19T10:00:00Z"));
+    expect(next?.toISOString()).toBe("2026-06-22T09:00:00.000Z");
+  });
+  it("evaluates the weekday and time in scheduleTz", () => {
+    // 2026-06-22T02:00Z is Mon in UTC but still Sun 20:00 in Mexico City (UTC-6),
+    // so the next Mon-Fri 09:00 slot is Monday 09:00 America/Mexico_City = 15:00Z.
+    const next = nextRunInstant(CRON, "America/Mexico_City", new Date("2026-06-22T02:00:00Z"));
+    expect(next?.toISOString()).toBe("2026-06-22T15:00:00.000Z");
+  });
+  it("is strictly after `from` (an exact-slot instant returns the following day)", () => {
+    const next = nextRunInstant(CRON, "UTC", new Date("2026-06-17T09:00:00Z"));
+    expect(next?.toISOString()).toBe("2026-06-18T09:00:00.000Z");
   });
 });
 

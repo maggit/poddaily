@@ -1,5 +1,5 @@
 import { Queue } from "bullmq";
-import { QUEUE_NAME, SEND_DM_JOB, REMINDER_JOB, reminderDelays } from "@poddaily/shared";
+import { QUEUE_NAME, OPEN_RUN_JOB, SEND_DM_JOB, REMINDER_JOB, reminderDelays } from "@poddaily/shared";
 import type { SendDmJob, EnqueueSend, TimeoutJob, EnqueueTimeout, EnqueueReminders, ReminderJob } from "./types";
 
 export { QUEUE_NAME };
@@ -57,8 +57,8 @@ export function makeEnqueueReminders(queue: Queue): EnqueueReminders {
 }
 
 /** Enqueue an open-run job to fire immediately (used by trigger + scheduler tick). */
-export async function enqueueOpenRun(queue: Queue, standupId: string): Promise<void> {
-  await queue.add("open-run", { standupId }, {
+export async function enqueueOpenRun(queue: Queue, standupId: string, opts: { force?: boolean } = {}): Promise<void> {
+  await queue.add(OPEN_RUN_JOB, { standupId, force: opts.force ?? false }, {
     attempts: 3,
     backoff: { type: "exponential", delay: 30_000 },
     removeOnComplete: true,

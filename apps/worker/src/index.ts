@@ -1,7 +1,7 @@
 import { Worker } from "bullmq";
 import { createDb } from "@poddaily/db";
 import { createSlackClient } from "@poddaily/slack-client";
-import { SYNC_DIRECTORY_JOB, DIRECTORY_SYNC_SCHEDULER_ID, DIRECTORY_SYNC_EVERY_MS, PRUNE_LINEAR_JOB, PRUNE_LINEAR_SCHEDULER_ID, PRUNE_LINEAR_EVERY_MS } from "@poddaily/shared";
+import { SYNC_DIRECTORY_JOB, DIRECTORY_SYNC_SCHEDULER_ID, DIRECTORY_SYNC_EVERY_MS, PRUNE_LINEAR_JOB, PRUNE_LINEAR_SCHEDULER_ID, PRUNE_LINEAR_EVERY_MS, RECONCILE_JOB, RECONCILE_SCHEDULER_ID, RECONCILE_EVERY_MS } from "@poddaily/shared";
 import { QUEUE_NAME, createQueue, redisConnection } from "./queue";
 import { reconcileSchedules } from "./reconcileSchedules";
 import { createProcessor } from "./processor";
@@ -12,6 +12,15 @@ async function main() {
   const queue = createQueue();
 
   await reconcileSchedules(queue, db);
+
+  // Standup schedules also reconcile on demand (the web app enqueues RECONCILE_JOB after
+  // any standup change) and periodically as a safety net, so a standup created or edited
+  // from the web starts firing without a worker restart.
+  await queue.upsertJobScheduler(
+    RECONCILE_SCHEDULER_ID,
+    { every: RECONCILE_EVERY_MS },
+    { name: RECONCILE_JOB, data: {} },
+  );
 
   // Keep the Slack workspace directory fresh for member search: a repeatable sync every
   // few hours, plus one immediate run at boot so the table populates on first deploy.

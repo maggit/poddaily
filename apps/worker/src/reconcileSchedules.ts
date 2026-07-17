@@ -1,9 +1,9 @@
 import { createDb, schema, eq } from "@poddaily/db";
-import { deriveTickCron } from "@poddaily/shared";
+import { deriveTickCron, OPEN_RUN_JOB } from "@poddaily/shared";
 import { createQueue } from "./queue";
 import { diffSchedules, type ActiveStandup, type ExistingJob } from "./reconcile";
 
-const REPEAT_NAME = "open-run"; // repeatable job name
+const REPEAT_NAME = OPEN_RUN_JOB; // repeatable job name
 
 /** Reconcile repeatable open-run jobs against the active standups. */
 export async function reconcileSchedules(

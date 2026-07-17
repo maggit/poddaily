@@ -2,11 +2,13 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getTeam } from "@/lib/teams";
 import { getStandup, upsertStandup, setStandupActive } from "@/lib/standups";
+import { enqueueStandupTrigger, enqueueScheduleReconcile } from "@/lib/queue";
 import { requireTeamEdit, getCurrentUser, canEditTeam } from "@/lib/authz";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
 import type { ActionState } from "@/components/ui/form";
 import { StandupForm } from "@/components/standups/standup-form";
+import { TriggerNowButton } from "@/components/standups/trigger-now-button";
 import { DEFAULT_QUESTIONS, cronFromWeekly, parseWeeklyCron, type Question } from "@poddaily/shared";
 
 export default async function StandupConfigPage({ params }: { params: Promise<{ id: string }> }) {
@@ -35,8 +37,9 @@ export default async function StandupConfigPage({ params }: { params: Promise<{ 
     if (weekdayNums.length === 0) return { error: "Pick at least one weekday." };
     if (Number.isNaN(h) || Number.isNaN(m)) return { error: "Enter a valid time." };
     const reminderIntervalMinutes = Math.max(0, Math.floor(Number(fd.get("reminderIntervalMinutes") ?? 60)) || 0);
+    let saved;
     try {
-      await upsertStandup(id, {
+      saved = await upsertStandup(id, {
         questions: cleaned,
         scheduleCron: cronFromWeekly({ weekdays: weekdayNums, hour: h, minute: m }),
         scheduleTz: String(fd.get("scheduleTz") ?? "America/Mexico_City"),
@@ -46,6 +49,15 @@ export default async function StandupConfigPage({ params }: { params: Promise<{ 
       });
     } catch (err) {
       return { error: (err as Error).message || "Could not save the standup." };
+    }
+    try {
+      // Make the schedule live without a worker restart, and optionally send right away.
+      await enqueueScheduleReconcile();
+      if (fd.get("sendNow") === "on" && saved.isActive !== false) {
+        await enqueueStandupTrigger(saved.id, { force: true });
+      }
+    } catch {
+      return { error: "Saved, but the queue is unreachable — the schedule will sync on the worker's next periodic reconcile." };
     }
     revalidatePath(`/teams/${id}/standup`);
     redirect(`/teams/${id}`);
@@ -57,7 +69,26 @@ export default async function StandupConfigPage({ params }: { params: Promise<{ 
     const current = await getStandup(id);
     if (!current) return;
     await setStandupActive(id, !current.isActive);
+    try {
+      await enqueueScheduleReconcile();
+    } catch (err) {
+      console.warn("[standup] reconcile enqueue failed (worker will catch up periodically):", (err as Error).message);
+    }
     revalidatePath(`/teams/${id}/standup`);
+  }
+
+  async function triggerNowAction(): Promise<ActionState> {
+    "use server";
+    await requireTeamEdit(id);
+    const current = await getStandup(id);
+    if (!current) return { error: "Configure and save the standup first." };
+    if (current.isActive === false) return { error: "This standup is paused — resume it before triggering." };
+    try {
+      await enqueueStandupTrigger(current.id, { force: true });
+    } catch {
+      return { error: "Could not reach the queue — is Redis up?" };
+    }
+    return { ok: true };
   }
 
   const editable = await canEditTeam(await getCurrentUser(), id);
@@ -80,6 +111,9 @@ export default async function StandupConfigPage({ params }: { params: Promise<{ 
                       {standup.isActive === false ? "Resume" : "Pause"}
                     </button>
                   </form>
+                ) : null}
+                {editable && standup.isActive !== false ? (
+                  <TriggerNowButton action={triggerNowAction} />
                 ) : null}
               </div>
             ) : null

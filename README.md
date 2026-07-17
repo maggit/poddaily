@@ -52,7 +52,15 @@ what's next and the [PRD](ContextDB/01_specs/poddaily-prd.md) for the full scope
 - **Team (pod) management** — create teams, set the Slack channel and tribe, manage
   members with per-member permissions and timezone capture.
 - **Standup configuration** — questions, schedule, intro/outro text, and the reminder
-  interval, per team.
+  interval, per team. Optionally **send the standup immediately on save**, and schedule
+  changes go live without a worker restart.
+- **Trigger now** — send a team's standup on demand from the admin web (managers on their
+  own teams, admins anywhere): DMs go out to everyone right away, and members who already
+  got today's DM are skipped. Also available as a CLI (`trigger <standupId> --force`).
+- **Standup health view** — one row per team showing whether today's run fired, how many
+  DMs went out vs. how many people reported, timed-out counts, and the next scheduled run.
+  A standup that should have run but didn't is flagged **"Did not trigger"** so a missed
+  schedule is visible at a glance and one click re-sends it.
 - **Reports dashboard** — today's participation across all teams, plus per-team history:
   a feed of per-person check-in cards with Slack avatars and full answers.
 - **Role-based access** — `viewer` / `manager` / `admin` tiers; the first login on a
@@ -138,7 +146,12 @@ The worker schedules and sends standup DMs. It needs Redis:
 
 Trigger a run immediately (instead of waiting for the daily tick):
 
-    pnpm --filter @poddaily/worker trigger <standupId>
+    pnpm --filter @poddaily/worker trigger <standupId>          # opens today's run if it's a scheduled day
+    pnpm --filter @poddaily/worker trigger <standupId> --force  # send now regardless of weekday (same as the web "Trigger now")
+
+The admin web's **Trigger now** button and the "send on save" checkbox enqueue this same
+forced open-run; `--force` bypasses the weekday guard and DMs immediately, and it's safe to
+run on an already-open run (members who already got today's DM are skipped).
 
 Env: `REDIS_URL` (BullMQ), `SLACK_BOT_TOKEN` (bot DM posting). In tests/smoke,
 `SLACK_API_BASE_URL` points the bot client at the local Slack stub.

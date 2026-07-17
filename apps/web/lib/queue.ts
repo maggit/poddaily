@@ -1,5 +1,5 @@
 import { Queue } from "bullmq";
-import { QUEUE_NAME, SEND_DM_JOB, SYNC_DIRECTORY_JOB } from "@poddaily/shared";
+import { QUEUE_NAME, SEND_DM_JOB, SYNC_DIRECTORY_JOB, OPEN_RUN_JOB, RECONCILE_JOB } from "@poddaily/shared";
 import type { SendDmJob } from "@poddaily/shared";
 
 const globalForQueue = globalThis as unknown as { _poddailyQueue?: Queue };
@@ -27,4 +27,27 @@ export async function enqueueSendDm(job: SendDmJob): Promise<void> {
 /** Enqueue an on-demand workspace directory resync (the worker also runs it on a schedule). */
 export async function enqueueDirectorySync(): Promise<void> {
   await getQueue().add(SYNC_DIRECTORY_JOB, {}, { removeOnComplete: true, removeOnFail: false });
+}
+
+/**
+ * Enqueue an open-run for a standup. `force` = manual trigger: the worker bypasses the
+ * weekday guard, DMs everyone immediately, and re-fans-out on an already-open run (members
+ * who already got today's DM are skipped by sendDm's idempotency check).
+ */
+export async function enqueueStandupTrigger(standupId: string, opts: { force?: boolean } = {}): Promise<void> {
+  await getQueue().add(OPEN_RUN_JOB, { standupId, force: opts.force ?? false }, {
+    attempts: 3,
+    backoff: { type: "exponential", delay: 30_000 },
+    removeOnComplete: true,
+    removeOnFail: false,
+  });
+}
+
+/**
+ * Ask the worker to re-sync its repeatable schedulers with the standups table. Enqueued
+ * after any standup create/update/pause/resume so schedule changes take effect without a
+ * worker restart (the worker also reconciles at boot and every 15 minutes).
+ */
+export async function enqueueScheduleReconcile(): Promise<void> {
+  await getQueue().add(RECONCILE_JOB, {}, { removeOnComplete: true, removeOnFail: false });
 }

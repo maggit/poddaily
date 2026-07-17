@@ -1,7 +1,7 @@
 "use client";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { UserPlus } from "lucide-react";
-import { COMMON_TIMEZONES } from "@poddaily/shared";
+import { COMMON_TIMEZONES, TIMEZONE_OPTIONS } from "@poddaily/shared";
 import { Button } from "@/components/ui/button";
 import { Field, Label, Select, FormError, type ActionState, type FormAction } from "@/components/ui/form";
 import { MemberSearch, type DirUser } from "./member-search";
@@ -35,10 +35,10 @@ export function AddMemberForm({ action }: { action: FormAction }) {
           <Label>Teammate</Label>
           <MemberSearch selected={selected} onSelect={setSelected} />
         </div>
-        <Field label="Timezone" className="w-48">
+        <Field label="Timezone" className="w-72">
           {/* key resets the uncontrolled select's default when the selection changes */}
           <Select key={tz} name="timezone" defaultValue={tz}>
-            {COMMON_TIMEZONES.map((z) => <option key={z} value={z}>{z}</option>)}
+            {TIMEZONE_OPTIONS.map((z) => <option key={z.value} value={z.value}>{z.label}</option>)}
           </Select>
         </Field>
         <Button type="submit" disabled={pending || !selected}>

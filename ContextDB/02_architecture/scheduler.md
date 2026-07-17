@@ -58,8 +58,34 @@ failures land in the BullMQ failed set (delivery-success metric is tracked from 
 
 ## Schedule-change reconciliation
 
-Editing a standup's `schedule_cron`, `schedule_tz`, or `is_active` triggers the scheduler to
-remove and recreate that standup's repeatable job so the next run reflects the new config.
+Reconciliation (`reconcileSchedules`) diffs the active standups against the registered BullMQ
+job schedulers and adds/removes to match. It runs in three places:
+
+1. **Worker boot** — the original trigger.
+2. **On demand** — the web app enqueues a `reconcile-schedules` job (`enqueueScheduleReconcile`
+   in `apps/web/lib/queue.ts`) after any standup **create / update / pause / resume**. The
+   worker's processor handles that job by re-running `reconcileSchedules`. This is what makes a
+   newly created standup start firing **without a worker restart**.
+3. **Periodically** — a repeatable `reconcile-schedules` job every 15 minutes
+   (`RECONCILE_EVERY_MS`) as a safety net, so a dropped/failed on-demand enqueue still
+   self-heals within a quarter hour.
+
+> **History:** before this, reconciliation only ran at worker boot. A standup created from the
+> web after the worker had booted never got a job scheduler, so it silently never fired until
+> the next deploy — the "new standup never triggered" bug. Items 2 and 3 close that gap.
+
+## Manual trigger ("Trigger now" / send-on-save)
+
+A forced `open-run` (`{ standupId, force: true }`) can be enqueued from the admin web (the
+standup config page and the health view), from the save-time "send now" checkbox, or via the
+CLI (`worker/trigger.ts --force`). `force`:
+
+- **bypasses the weekday guard** (`isActiveWeekday`) — sends even on a non-scheduled day;
+- **fans out immediately** (delay 0) instead of at each member's tz-anchored instant;
+- **re-fans-out on an already-open run** — `sendDm`'s `(run_id, slack_user_id)` short-circuit
+  means members who already received today's DM are skipped, so it only fills gaps.
+
+A **paused** standup still no-ops under `force` (the `is_active` guard is intentional).
 
 ## Pure, testable core
 

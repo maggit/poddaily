@@ -9,6 +9,24 @@ export interface RetriggerJob {
   channel: string; // the DM channel to ack into (unused by the worker, carried for completeness)
 }
 
+/** BullMQ job name for opening a standup's daily run (scheduler tick or manual trigger). */
+export const OPEN_RUN_JOB = "open-run";
+
+/** Payload for an open-run job. `force` = manual trigger: bypass the weekday guard,
+ * DM everyone immediately (no per-member delay), and fan out again on an
+ * already-open run so members without a report still get their DM. */
+export interface OpenRunJob {
+  standupId: string;
+  force?: boolean;
+}
+
+/** Re-sync repeatable open-run schedulers with the standups table. The web app enqueues
+ * this after any standup create/update/pause/resume so schedule changes take effect
+ * without a worker restart; the worker also runs it periodically as a safety net. */
+export const RECONCILE_JOB = "reconcile-schedules";
+export const RECONCILE_SCHEDULER_ID = "reconcile-schedules";
+export const RECONCILE_EVERY_MS = 15 * 60 * 1000; // every 15 minutes
+
 /** BullMQ job name for a per-member send-standup-dm job. */
 export const SEND_DM_JOB = "send-dm";
 

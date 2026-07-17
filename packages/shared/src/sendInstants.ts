@@ -41,6 +41,24 @@ export function computeSendInstant(cron: string, memberTz: string, anchorDateISO
   return dt.toJSDate();
 }
 
+/**
+ * The next UTC instant this standup is scheduled to fire strictly after `from`:
+ * the next active weekday (in `scheduleTz`) at the configured hour:minute.
+ * Returns null only if the cron has no weekdays.
+ */
+export function nextRunInstant(cron: string, scheduleTz: string, from: Date): Date | null {
+  const { weekdays, hour, minute } = parseWeeklyCron(cron);
+  if (weekdays.length === 0) return null;
+  const start = DateTime.fromJSDate(from, { zone: scheduleTz });
+  if (!start.isValid) throw new Error(`Invalid instant/zone: ${from.toISOString()} / ${scheduleTz}`);
+  for (let i = 0; i <= 7; i++) {
+    const candidate = start.plus({ days: i }).set({ hour, minute, second: 0, millisecond: 0 });
+    if (candidate <= start) continue;
+    if (weekdays.includes(luxonToCronDow(candidate.weekday))) return candidate.toJSDate();
+  }
+  return null;
+}
+
 /** Repeatable-tick cron derived from a standup cron: same weekdays, fires at 00:05. */
 export function deriveTickCron(cron: string): string {
   const { weekdays } = parseWeeklyCron(cron);

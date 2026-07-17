@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { WEEKDAYS, COMMON_TIMEZONES } from "@poddaily/shared";
+import { WEEKDAYS, TIMEZONE_OPTIONS } from "@poddaily/shared";
 import { Field, Input, Select } from "@/components/ui/form";
 
 export function SchedulePicker({
@@ -44,9 +44,9 @@ export function SchedulePicker({
         <Field label="Time" className="w-32">
           <Input type="time" name="time" defaultValue={time} />
         </Field>
-        <Field label="Default timezone" className="w-56">
+        <Field label="Default timezone" className="w-72">
           <Select name="scheduleTz" defaultValue={initialTz}>
-            {COMMON_TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+            {TIMEZONE_OPTIONS.map((tz) => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
           </Select>
         </Field>
       </div>

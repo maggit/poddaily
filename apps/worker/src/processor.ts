@@ -8,8 +8,9 @@ import { retrigger } from "./retrigger";
 import { remindReport } from "./remindReport";
 import { syncDirectory } from "./syncDirectory";
 import { pruneLinear } from "./pruneLinear";
-import type { RetriggerJob, ReminderJob } from "@poddaily/shared";
-import { SEND_DM_JOB, REMINDER_JOB, SYNC_DIRECTORY_JOB, PRUNE_LINEAR_JOB } from "@poddaily/shared";
+import { reconcileSchedules } from "./reconcileSchedules";
+import type { RetriggerJob, ReminderJob, OpenRunJob } from "@poddaily/shared";
+import { OPEN_RUN_JOB, RECONCILE_JOB, SEND_DM_JOB, REMINDER_JOB, SYNC_DIRECTORY_JOB, PRUNE_LINEAR_JOB } from "@poddaily/shared";
 import type { Db, SendDmJob, TimeoutJob } from "./types";
 
 export interface ProcessorDeps {
@@ -29,9 +30,11 @@ export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<void
   const enqueueTimeout = makeEnqueueTimeout(queue);
   const enqueueReminders = makeEnqueueReminders(queue);
   return async (job: Job): Promise<void> => {
-    if (job.name === "open-run") {
-      const { standupId } = job.data as { standupId: string };
-      await openRun({ db, enqueueSend, slack }, standupId, new Date());
+    if (job.name === OPEN_RUN_JOB) {
+      const { standupId, force } = job.data as OpenRunJob;
+      await openRun({ db, enqueueSend, slack }, standupId, new Date(), { force });
+    } else if (job.name === RECONCILE_JOB) {
+      await reconcileSchedules(queue, db);
     } else if (job.name === SEND_DM_JOB) {
       await sendDm({ db, slack, enqueueTimeout, enqueueReminders }, job.data as SendDmJob);
     } else if (job.name === "timeout-report") {

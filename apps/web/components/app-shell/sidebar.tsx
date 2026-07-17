@@ -2,11 +2,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, ListChecks, MessageSquare, Settings, Shield, LogOut, Blocks, type LucideIcon } from "lucide-react";
+import { Users, ListChecks, MessageSquare, Settings, Shield, LogOut, Blocks, HeartPulse, type LucideIcon } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
-const ICONS: Record<string, LucideIcon> = { Users, ListChecks, MessageSquare, Settings };
+const ICONS: Record<string, LucideIcon> = { Users, ListChecks, MessageSquare, Settings, HeartPulse };
 
 function isActive(pathname: string, href: string) {
   return pathname === href || (href !== "/dashboard" && pathname.startsWith(href));

@@ -4,5 +4,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Teams", href: "/dashboard", icon: "Users" },
   { label: "Standups", href: "/standups", icon: "ListChecks" },
   { label: "Reports", href: "/reports", icon: "MessageSquare" },
+  { label: "Health", href: "/health", icon: "HeartPulse" },
   { label: "Settings", href: "/settings", icon: "Settings" },
 ];

@@ -41,8 +41,16 @@ export function StandupForm({
         </div>
       </Card>
 
-      <div className="flex items-center justify-end gap-4">
-        <div className="flex-1"><FormError>{state?.error}</FormError></div>
+      <div className="flex flex-wrap items-center justify-end gap-4">
+        <div className="min-w-48 flex-1"><FormError>{state?.error}</FormError></div>
+        <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted-foreground">
+          <input
+            type="checkbox"
+            name="sendNow"
+            className="h-4 w-4 rounded border-input accent-[var(--accent)]"
+          />
+          Send to the team right after saving
+        </label>
         <Button type="submit" variant="accent" size="lg" disabled={pending}>
           {pending ? "Saving…" : "Save standup"}
         </Button>

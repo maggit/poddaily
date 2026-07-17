@@ -110,6 +110,45 @@ describe("openRun", () => {
     expect(enq).toHaveLength(0);
   });
 
+  it("force opens a run on an inactive weekday and enqueues all sends immediately", async () => {
+    const standupId = await seedStandup();
+    const sat = new Date("2026-06-20T00:05:00Z"); // Saturday — normally a no-op
+    const enqueued: Array<{ job: SendDmJob; delayMs: number }> = [];
+    const slack = fakeSlack();
+
+    const r = await openRun({ db, enqueueSend: async (job, opts) => { enqueued.push({ job, delayMs: opts.delayMs }); }, slack }, standupId, sat, { force: true });
+
+    expect(r.runId).toBeTruthy();
+    expect(r.enqueued).toBe(2);
+    // manual trigger sends now, not at each member's scheduled instant
+    expect(enqueued.every((e) => e.delayMs === 0)).toBe(true);
+  });
+
+  it("force re-fans-out on an already-open run (sendDm idempotency dedupes actual DMs)", async () => {
+    const standupId = await seedStandup();
+    const now = new Date("2026-06-17T00:05:00Z");
+    const slack = fakeSlack();
+    await openRun({ db, enqueueSend: async () => {}, slack }, standupId, now);
+
+    const second: SendDmJob[] = [];
+    const r2 = await openRun({ db, enqueueSend: async (j) => { second.push(j); }, slack }, standupId, now, { force: true });
+
+    expect(r2.runId).toBeTruthy();
+    expect(second).toHaveLength(2); // re-enqueued for everyone; sendDm skips members with a report
+    // still a single run for the day
+    const runs = await sql`select count(*)::int as n from standup_runs where standup_id = ${standupId}`;
+    expect(runs[0].n).toBe(1);
+  });
+
+  it("force still no-ops for a paused standup", async () => {
+    const standupId = await seedStandup(false);
+    const enq: SendDmJob[] = [];
+    const slack = fakeSlack();
+    const r = await openRun({ db, enqueueSend: async (j) => { enq.push(j); }, slack }, standupId, new Date("2026-06-17T00:05:00Z"), { force: true });
+    expect(r.runId).toBeNull();
+    expect(enq).toHaveLength(0);
+  });
+
   it("ensureRunOpen opens a run with an opening message and returns the existing run on a second call", async () => {
     const standupId = await seedStandup();
     const [standupRow] = await db.select().from(schema.standups).where(eq(schema.standups.id, standupId));
