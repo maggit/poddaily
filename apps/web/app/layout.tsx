@@ -28,6 +28,7 @@ const landingGrotesk = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.AUTH_URL ?? "https://poddaily.io"),
+  publisher: "Apps by SAHARA",
   title: {
     default: "poddaily — open-source Slack standup bot",
     template: "%s · poddaily",

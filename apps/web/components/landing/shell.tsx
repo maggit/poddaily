@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export const GITHUB_URL = "https://github.com/maggit/poddaily";
+export const PUBLISHER_URL = "https://appsbysahara.com";
+export const SUPPORT_EMAIL = "support@appsbysahara.com";
 const THEME_KEY = "pd-landing-theme";
 
 function tickButtonClass(primary: boolean) {
@@ -211,6 +213,15 @@ export function LandingShell({
               {official && (
                 <p>
                   Made with <span className="text-accent">♥</span> by Raquel Hernandez
+                  {" "}
+                  · published by{" "}
+                  <a href={PUBLISHER_URL} className="underline underline-offset-2 transition-colors hover:text-foreground">
+                    Apps by SAHARA
+                  </a>{" "}
+                  ·{" "}
+                  <a href={`mailto:${SUPPORT_EMAIL}`} className="underline underline-offset-2 transition-colors hover:text-foreground">
+                    {SUPPORT_EMAIL}
+                  </a>
                 </p>
               )}
             </div>
